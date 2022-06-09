@@ -18,11 +18,24 @@
   
   <div>
   <h2>Testing video loading: </h2>
-  <video width="320" height="240" controls>
+  <video width="640" height="480" controls>
   <source src="pics\sample.mp4" type="video/mp4">
   <source src="pics\sample.ogg" type="video/ogg">
 Your browser does not support the video tag.
 </video>
   </div>
+  
+  <div id="like_button_container"></div>
+  
+  
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <!-- Load our React component. -->
+  <script src="like_button.js"></script>
+  
+    <script type="text/javascript">
+  alert("This alert box was called with the onload event");
+  </script>
 </body>
 </html>
