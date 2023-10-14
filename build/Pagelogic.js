@@ -16,9 +16,9 @@ fs.readFile("./config.json", "utf8", (error, data) => {
     return;
   }
   console.log(JSON.parse(data));
-  var Words = JSON.parse(data);
+  var words = JSON.parse(data);
   
-  return Words.Employees[num].firstName;
+  return words.employees[num].firstName;
   
 });
 	
