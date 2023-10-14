@@ -1,5 +1,16 @@
 document.addEventListener("DOMContentLoaded", function() {
     // Code that runs when the DOM is fully loaded
+	 fetch('words.json')  // Change the URL to your JSON file or API endpoint
+        .then(response => response.json())
+        .then(data => {
+            const randomIndex = Math.floor(Math.random() * data.Employees.length);
+            const randomFirstName = data.Employees[randomIndex].firstName;
+            document.getElementById("firstNameDisplay").textContent = randomFirstName;
+        })
+        .catch(error => {
+            console.error('Error loading data:', error);
+        });
+	
     alert("The DOM has fully loaded!");
 });
 
@@ -24,6 +35,7 @@ function checkEmployeeName(firstName, lastName) {
             if (matchingEmployee) {
                  const correctLastName = matchingEmployee.lastName;
 				 document.getElementById("paragraph").textContent = "✅ Last name has been checked!";
+				 Console.log("calling Highlight, with: "+lastNameInput+ " and "+correctLastName);
                 highlightLastName(lastNameInput, correctLastName);
             } else {
                 document.getElementById("input").textContent = "❌ First name not found";
@@ -38,14 +50,20 @@ function checkEmployeeName(firstName, lastName) {
 function highlightLastName(inputElement, correctLastName) {
     const lastName = inputElement.value;
     let resultHtml = '';
+	Console.log("Highlight function called, with: "+lastNameInput.value+ " and "+correctLastName);
 
     for (let i = 0; i < lastName.length; i++) {
         if (lastName[i] === correctLastName[i]) {
+			Console.log("correct");
             resultHtml += `<span class="highlight-correct">${lastName[i]}</span>`;
         } else {
             resultHtml += `<span class="highlight-incorrect">${lastName[i]}</span>`;
+			Console.log("incorrect");
+
         }
     }
+
+	Console.log("result is:" resultHtml);
 
     inputElement.innerHTML = resultHtml;
 }
