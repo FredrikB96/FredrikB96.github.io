@@ -8,23 +8,6 @@ function Loadjson() {
 }
 
 function TestNode(num) {
-const fs = require("fs");
-
-<<<<<<< Updated upstream
-fs.readFile("./words.json", "utf8", (error, data) => {
-=======
-fs.readFile("./words.json", (error, data) => {
->>>>>>> Stashed changes
-  if (error) {
-    console.log(error);
-    return;
-  }
-  console.log(JSON.parse(data));
-  var words = JSON.parse(data);
-  
-  return words.employees[num].firstName;
-  
-});
-	
+return false;
 }
 
