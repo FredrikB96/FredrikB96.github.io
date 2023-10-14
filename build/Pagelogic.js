@@ -1,7 +1,7 @@
-document.addEventListener("DOMContentLoaded", function() {
+/* document.addEventListener("DOMContentLoaded", function() {
     // Your code here
     alert("The DOM has loaded!");
-});
+}); */
 
 document.getElementById("checkButton").addEventListener("click", function() {
     const firstName = document.getElementById("firstNameDisplay").textContent.trim();
