@@ -8,17 +8,19 @@ function Loadjson() {
 }
 
 function TestNode(num) {
-    var success = false;
+const fs = require("fs");
 
-    const fs = require('fs');
-
-    fs.readFile('words.json', (err, data) => {
-        if (err) throw err;
-        let student = JSON.parse(data);
-        console.log(student);
-        sucess = true;
-		return student[num].FirstName;		
-    });
+fs.readFile("./config.json", "utf8", (error, data) => {
+  if (error) {
+    console.log(error);
+    return;
+  }
+  console.log(JSON.parse(data));
+  var Words = JSON.parse(data);
+  
+  return Words.Employees[num].firstName;
+  
+});
 	
 }
 
