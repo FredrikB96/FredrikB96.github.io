@@ -16,8 +16,7 @@ function TestNode(num) {
         if (err) throw err;
         let student = JSON.parse(data);
         console.log(student);
-        sucess = true;
-		return student[num].FirstName;		
+        success = true;	
     });
 	
 }
