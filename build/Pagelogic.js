@@ -1,6 +1,5 @@
 function Populate() {
-    var object = (TestNode(Math.floor(Math.random() * 3)) == true ? TestNode(Math.floor(Math.random() * 3)) : Loadjson()); 
-                    Loadjson();
+    var object = TestNode(Math.floor(Math.random() * 3));
     document.getElementById("input").innerHTML = object;
 }
 
@@ -18,7 +17,8 @@ function TestNode(num) {
         let student = JSON.parse(data);
         console.log(student);
         sucess = true;
+		return student[num].FirstName;		
     });
-    return student[num].FirstName;
+	
 }
 
