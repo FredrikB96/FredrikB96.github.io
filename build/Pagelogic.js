@@ -35,7 +35,7 @@ function checkEmployeeName(firstName, lastName) {
             if (matchingEmployee) {
                  const correctLastName = matchingEmployee.lastName;
 				 document.getElementById("paragraph").textContent = "✅ Last name has been checked!";
-				 Console.log("calling Highlight, with: "+lastNameInput+ " and "+correctLastName);
+				 console.log("calling Highlight, with: "+lastNameInput+ " and "+correctLastName);
                 highlightLastName(lastNameInput, correctLastName);
             } else {
                 document.getElementById("input").textContent = "❌ First name not found";
@@ -50,20 +50,20 @@ function checkEmployeeName(firstName, lastName) {
 function highlightLastName(inputElement, correctLastName) {
     const lastName = inputElement.value;
     let resultHtml = '';
-	Console.log("Highlight function called, with: "+lastNameInput.value+ " and "+correctLastName);
+	console.log("Highlight function called, with: "+lastNameInput.value+ " and "+correctLastName);
 
     for (let i = 0; i < lastName.length; i++) {
         if (lastName[i] === correctLastName[i]) {
-			Console.log("correct");
+			console.log("correct");
             resultHtml += `<span class="highlight-correct">${lastName[i]}</span>`;
         } else {
             resultHtml += `<span class="highlight-incorrect">${lastName[i]}</span>`;
-			Console.log("incorrect");
+			console.log("incorrect");
 
         }
     }
 
-	Console.log("result is:"+resultHtml);
+	console.log("result is:"+resultHtml);
 
     inputElement.innerHTML = resultHtml;
 }
