@@ -22,11 +22,9 @@ function checkEmployeeName(firstName, lastName) {
             });
 
             if (matchingEmployee) {
-                if (matchingEmployee.lastName.toLowerCase() === lastName) {
-                    document.getElementById("input").textContent = "✅ Last name is correct!";
-                } else {
-                    document.getElementById("input").textContent = `❌ Last name should be "${matchingEmployee.lastName}"`;
-                }
+                 const correctLastName = matchingEmployee.lastName;
+				 document.getElementById("paragraph").textContent = "✅ Last name has been checked!";
+                highlightLastName(lastNameInput, correctLastName);
             } else {
                 document.getElementById("input").textContent = "❌ First name not found";
             }
@@ -34,4 +32,20 @@ function checkEmployeeName(firstName, lastName) {
         .catch(error => {
             console.error('Error loading data:', error);
         });
+}
+
+
+function highlightLastName(inputElement, correctLastName) {
+    const lastName = inputElement.value;
+    let resultHtml = '';
+
+    for (let i = 0; i < lastName.length; i++) {
+        if (lastName[i] === correctLastName[i]) {
+            resultHtml += `<span class="highlight-correct">${lastName[i]}</span>`;
+        } else {
+            resultHtml += `<span class="highlight-incorrect">${lastName[i]}</span>`;
+        }
+    }
+
+    inputElement.innerHTML = resultHtml;
 }
