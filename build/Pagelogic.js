@@ -63,7 +63,7 @@ function highlightLastName(inputElement, correctLastName) {
         }
     }
 
-	Console.log("result is:" resultHtml);
+	Console.log("result is:"+resultHtml);
 
     inputElement.innerHTML = resultHtml;
 }
