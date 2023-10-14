@@ -24,7 +24,6 @@ document.getElementById("lastNameInput").addEventListener("keyup", function(even
 document.getElementById("checkButton").addEventListener("click", function() {
     const firstName = document.getElementById("firstNameDisplay").textContent.trim().toLowerCase();
     const lastName = document.getElementById("lastNameInput").value.trim().toLowerCase();
-	//document.getElementById("lastNameInput").value = "";
     if (lastName) {
         checkEmployeeName(firstName, lastName);
     }
@@ -51,6 +50,7 @@ function checkEmployeeName(firstName, lastName) {
         .catch(error => {
             console.error('Error loading data:', error);
         });
+		//document.getElementById("lastNameInput").value = "";
 }
 
 
@@ -71,7 +71,8 @@ function highlightLastName(inputElement, correctLastName) {
     }
 
 	console.log("result is:"+resultHtml);
-
+	document.getElementById("lastNameInput").value = "";
 	document.getElementById("input").innerHTML = resultHtml;
+	document.getElementById("Answer").innerHTML = correctLastName;
     inputElement.innerHTML = resultHtml;
 }
