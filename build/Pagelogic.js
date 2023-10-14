@@ -10,7 +10,7 @@ function Loadjson() {
 function TestNode(num) {
 const fs = require("fs");
 
-fs.readFile("./config.json", "utf8", (error, data) => {
+fs.readFile("./words.json", "utf8", (error, data) => {
   if (error) {
     console.log(error);
     return;
