@@ -65,5 +65,6 @@ function highlightLastName(inputElement, correctLastName) {
 
 	console.log("result is:"+resultHtml);
 
+	document.getElementById("input").textContent = resultHtml;
     inputElement.innerHTML = resultHtml;
 }
