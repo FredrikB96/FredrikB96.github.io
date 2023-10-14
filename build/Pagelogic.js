@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(response => response.json())
         .then(data => {
             const randomIndex = Math.floor(Math.random() * data.Employees.length);
-            const randomFirstName = data.Employees[randomIndex].firstName;
+            const randomFirstName = data.Employees[3].firstName;
             document.getElementById("firstNameDisplay").textContent = randomFirstName;
         })
         .catch(error => {
@@ -40,7 +40,7 @@ function checkEmployeeName(firstName, lastName) {
             });
 
             if (matchingEmployee) {
-                 const correctLastName = matchingEmployee.lastName;
+                 const correctLastName = matchingEmployee.lastName.toLowerCase();
 				 document.getElementById("paragraph").textContent = "✅ Last name has been checked!";
 				 console.log("calling Highlight, with: "+lastNameInput+ " and "+correctLastName);
                 highlightLastName(lastNameInput, correctLastName);
@@ -55,7 +55,7 @@ function checkEmployeeName(firstName, lastName) {
 
 
 function highlightLastName(inputElement, correctLastName) {
-    const lastName = inputElement.value.toLowerCase();
+    const lastName = inputElement.value;
     let resultHtml = '';
 	console.log("Highlight function called, with: "+lastNameInput.value+ " and "+correctLastName);
 
