@@ -55,12 +55,12 @@ function checkEmployeeName(firstName, lastName) {
 
 
 function highlightLastName(inputElement, correctLastName) {
-    const lastName = inputElement.value;
+    const lastName = inputElement.value.toLowerCase();
     let resultHtml = '';
 	console.log("Highlight function called, with: "+lastNameInput.value+ " and "+correctLastName);
 
     for (let i = 0; i < lastName.length; i++) {
-        if (lastName[i].toLowerCase() === correctLastName[i].toLowerCase()) {
+        if (lastName[i] === correctLastName[i]) {
 			console.log("correct");
             resultHtml += `<span class="highlight-correct">${lastName[i]}</span>`;
         } else {
