@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(response => response.json())
         .then(data => {
             const randomIndex = Math.floor(Math.random() * data.Employees.length);
-            const randomFirstName = data.Employees[3].firstName;
+            const randomFirstName = data.Employees[randomIndex].firstName;
             document.getElementById("firstNameDisplay").textContent = randomFirstName;
         })
         .catch(error => {
