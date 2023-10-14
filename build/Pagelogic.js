@@ -1,15 +1,14 @@
 function Populate() {
-    var object = (TestNode() == true ? TestNode() : Loadjson()); 
+    var object = (TestNode(Math.floor(Math.random() * 3)) == true ? TestNode(Math.floor(Math.random() * 3)) : Loadjson()); 
                     Loadjson();
     document.getElementById("input").innerHTML = object;
-    alert("testing");
 }
 
 function Loadjson() {
     return random(Math.floor(Math.random() * 3));
 }
 
-function TestNode() {
+function TestNode(num) {
     var success = false;
 
     const fs = require('fs');
@@ -20,6 +19,6 @@ function TestNode() {
         console.log(student);
         sucess = true;
     });
-    return success;
+    return student[num].FirstName;
 }
 
