@@ -14,10 +14,17 @@ document.addEventListener("DOMContentLoaded", function() {
     alert("The DOM has fully loaded!");
 });
 
+document.getElementById("lastNameInput").addEventListener("keyup", function(event) {
+    if (event.key === "Enter") {
+        document.getElementById("checkButton").click();
+    }
+});
+
+
 document.getElementById("checkButton").addEventListener("click", function() {
     const firstName = document.getElementById("firstNameDisplay").textContent.trim().toLowerCase();
     const lastName = document.getElementById("lastNameInput").value.trim().toLowerCase();
-
+	document.getElementById("lastNameInput").value = "";
     if (lastName) {
         checkEmployeeName(firstName, lastName);
     }
@@ -53,7 +60,7 @@ function highlightLastName(inputElement, correctLastName) {
 	console.log("Highlight function called, with: "+lastNameInput.value+ " and "+correctLastName);
 
     for (let i = 0; i < lastName.length; i++) {
-        if (lastName[i] === correctLastName[i]) {
+        if (lastName[i].toLowerCase() === correctLastName[i].toLowerCase()) {
 			console.log("correct");
             resultHtml += `<span class="highlight-correct">${lastName[i]}</span>`;
         } else {
