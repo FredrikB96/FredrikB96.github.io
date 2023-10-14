@@ -1,16 +1,17 @@
 function Populate() {
-    var object = (TestNode() == true ? TestNode() : Loadjson()); 
-                    Loadjson();
+    var object = Loadjson();
     document.getElementById("input").innerHTML = object;
     alert("testing");
 }
 
 function Loadjson() {
-    return random(Math.floor(Math.random() * 3));
-}
-
-function TestNode() {
-    var success = false;
-    return success;
+    var fs = require('fs'); 
+  
+// Use fs.readFile() method to read the file 
+fs.readFile('words.json', 'utf8', function(err, data){ 
+      return JSON.parse(data);
+    // Display the file content 
+    console.log(data); 
+}); 
 }
 
