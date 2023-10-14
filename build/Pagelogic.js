@@ -7,7 +7,7 @@ function Populate() {
     fetch('words.json')  // Change the URL to your JSON file or API endpoint
         .then(response => response.json())
         .then(data => {
-			let test = JSON.parse(data);
+			//let test = JSON.parse(data);
 			const firstEmployee = data.Employees[0];
             document.getElementById("input").textContent = firstEmployee.firstName;
             
