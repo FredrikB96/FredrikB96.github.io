@@ -1,20 +1,176 @@
 {
-    "Employees": [
-        	{
-            "firstName": "みずき",
-            "lastName": "はだからぬ"
-        },
-        	{
-            "firstName": "みずき",
-            "lastName": "はだからぬ"
-        },
-        	{
-            "firstName": "みずき",
-            "lastName": "はだからぬ"
-        },
-		{
-            "firstName": "みずき",
-            "lastName": "はだからぬ"
-        }
-    ]
+    "Words": [
+	{
+    "Japanese": "あげる",
+    "English": "give"
+  },
+  {
+    "Japanese": "浴びる",
+    "English": "bathe/bask in/ suffer"
+  },
+  {
+    "Japanese": "いじめる",
+    "English": "tease/torment"
+  },
+  {
+    "Japanese": "疑う",
+    "English": "doubt/be suspicious"
+  },
+  {
+    "Japanese": "撃つ",
+    "English": "shout at/to attack"
+  },
+  {
+    "Japanese": "描く",
+    "English": "to draw/to paint/ to sketch"
+  },
+  {
+    "Japanese": "追う",
+    "English": "to chase/run after/pursue"
+  },
+  {
+    "Japanese": "置く",
+    "English": ""
+  },
+  {
+    "Japanese": "訪れる",
+    "English": "to visit/to call"
+  },
+  {
+    "Japanese": "固める",
+    "English": "to harden/to freeze/to strenghten"
+  },
+  {
+    "Japanese": "嫌う",
+    "English": "to hate/to dislike/to loathe"
+  },
+  {
+    "Japanese": "加える",
+    "English": "to append/to sum up/to add up"
+  },
+  {
+    "Japanese": "断る",
+    "English": "to refuse/to reject/dismiss/decline"
+  },
+  {
+    "Japanese": "好む",
+    "English": "to prefer/to like"
+  },
+  {
+    "Japanese": "殺す",
+    "English": "to kill"
+  },
+  {
+    "Japanese": "避ける",
+    "English": "to avoid/to alert/ to ward off"
+  },
+  {
+    "Japanese": "誘う",
+    "English": "to invite/to ask/ to call"
+  },
+  {
+    "Japanese": "敷く",
+    "English": "to spread out/ to lay out"
+  },
+  {
+    "Japanese": "示す",
+    "English": "to demostrate/ to tell/ to point out"
+  },
+  {
+    "Japanese": "記す",
+    "English": "to write down/ to note"
+  },
+  {
+    "Japanese": "吸う",
+    "English": "to smoke/to breathe in"
+  },
+  {
+    "Japanese": "捨てる",
+    "English": "throw away/cas aside/abandon"
+  },
+  {
+    "Japanese": "抱く",
+    "English": "embrace/hold in the arms"
+  },
+  {
+    "Japanese": "楽しむ",
+    "English": "to enjoy oneself"
+  },
+  {
+    "Japanese": "試す",
+    "English": "to attempt/to test/to try  out"
+  },
+  {
+    "Japanese": "保つ",
+    "English": "to keep/to perverse/to hold"
+  },
+  {
+    "Japanese": "包む",
+    "English": "to wrap up/to tuck in/to pack"
+  },
+  {
+    "Japanese": "積む",
+    "English": "to pile up/to stack"
+  },
+  {
+    "Japanese": "強める",
+    "English": "to strengthen/to emphasize"
+  },
+  {
+    "Japanese": "煮る",
+    "English": "to resemble/to look like/ to be similar to"
+  },
+  {
+    "Japanese": "盗む",
+    "English": "to steal"
+  },
+  {
+    "Japanese": "塗る",
+    "English": "to smear/to paint/to plaster"
+  },
+  {
+    "Japanese": "願う",
+    "English": "to desire/to wish/to hope"
+  },
+  {
+    "Japanese": "望む",
+    "English": "to desire/wish for/to expect"
+  },
+  {
+    "Japanese": "運ぶ",
+    "English": "to carry/to transport/to move"
+  },
+  {
+    "Japanese": "放す",
+    "English": "to release/to let go/to free"
+  },
+  {
+    "Japanese": "深める",
+    "English": "to deepen/to heighten/intesify"
+  },
+  {
+    "Japanese": "防ぐ",
+    "English": "to defend/to protect"
+  },
+  {
+    "Japanese": "振る",
+    "English": "to wave/to shake"
+  },
+  {
+    "Japanese": "巻く",
+    "English": "to wind up/to coil/to roll up"
+  },
+  {
+    "Japanese": "守る",
+    "English": "protect/guard/defend"
+  },
+  {
+    "Japanese": "結ぶ",
+    "English": "to tie/to bind/to link/to bear fruit"
+  },
+  {
+    "Japanese": "弱める",
+    "English": "to weaken"
+  }
+]
 }

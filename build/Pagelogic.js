@@ -3,9 +3,9 @@ document.addEventListener("DOMContentLoaded", function() {
 	 fetch('words.json')  // Change the URL to your JSON file or API endpoint
         .then(response => response.json())
         .then(data => {
-            const randomIndex = Math.floor(Math.random() * data.Employees.length);
-            const randomFirstName = data.Employees[randomIndex].firstName;
-            document.getElementById("firstNameDisplay").textContent = randomFirstName;
+            const randomIndex = Math.floor(Math.random() * data.Words.length);
+            const randomFirstName = data.Words[randomIndex].Japanese;
+            document.getElementById("JapaneseDisplay").textContent = randomFirstName;
         })
         .catch(error => {
             console.error('Error loading data:', error);
@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function() {
     alert("The DOM has fully loaded!");
 });
 
-document.getElementById("lastNameInput").addEventListener("keyup", function(event) {
+document.getElementById("EnglishInput").addEventListener("keyup", function(event) {
     if (event.key === "Enter") {
         document.getElementById("checkButton").click();
     }
@@ -22,27 +22,27 @@ document.getElementById("lastNameInput").addEventListener("keyup", function(even
 
 
 document.getElementById("checkButton").addEventListener("click", function() {
-    const firstName = document.getElementById("firstNameDisplay").textContent.trim().toLowerCase();
-    const lastName = document.getElementById("lastNameInput").value.trim().toLowerCase();
-    if (lastName) {
-        checkEmployeeName(firstName, lastName);
+    const Japanese = document.getElementById("JapaneseDisplay").textContent.trim().toLowerCase();
+    const English = document.getElementById("EnglishInput").value.trim().toLowerCase();
+    if (English) {
+        checkEmployeeName(Japanese, English);
     }
 });
 
-function checkEmployeeName(firstName, lastName) {
+function checkEmployeeName(Japanese, English) {
     fetch('words.json')  // Change the URL to your JSON file or API endpoint
         .then(response => response.json())
         .then(data => {
-            const matchingEmployee = data.Employees.find(employee => {
+            const matchingEmployee = data.Words.find(employee => {
                 // Compare first name while ignoring case
-                return employee.firstName.toLowerCase() === firstName;
+                return employee.Japanese.toLowerCase() === Japanese;
             });
 
             if (matchingEmployee) {
-                 const correctLastName = matchingEmployee.lastName.toLowerCase();
+                 const correctLastName = matchingEmployee.English.toLowerCase();
 				 document.getElementById("paragraph").textContent = "✅ Last name has been checked!";
-				 console.log("calling Highlight, with: "+lastNameInput+ " and "+correctLastName);
-                highlightLastName(lastNameInput, correctLastName);
+				 console.log("calling Highlight, with: "+EnglishInput+ " and "+correctLastName);
+                highlightLastName(EnglishInput, correctLastName);
             } else {
                 document.getElementById("input").textContent = "❌ First name not found";
             }
@@ -50,28 +50,28 @@ function checkEmployeeName(firstName, lastName) {
         .catch(error => {
             console.error('Error loading data:', error);
         });
-		//document.getElementById("lastNameInput").value = "";
+		//document.getElementById("EnglishInput").value = "";
 }
 
 
 function highlightLastName(inputElement, correctLastName) {
-    const lastName = inputElement.value;
+    const English = inputElement.value;
     let resultHtml = '';
-	console.log("Highlight function called, with: "+lastNameInput.value+ " and "+correctLastName);
+	console.log("Highlight function called, with: "+EnglishInput.value+ " and "+correctLastName);
 
-    for (let i = 0; i < lastName.length; i++) {
-        if (lastName[i] === correctLastName[i]) {
+    for (let i = 0; i < English.length; i++) {
+        if (English[i] === correctLastName[i]) {
 			console.log("correct");
-            resultHtml += `<span class="highlight-correct">${lastName[i]}</span>`;
+            resultHtml += `<span class="highlight-correct">${English[i]}</span>`;
         } else {
-            resultHtml += `<span class="highlight-incorrect">${lastName[i]}</span>`;
+            resultHtml += `<span class="highlight-incorrect">${English[i]}</span>`;
 			console.log("incorrect");
 
         }
     }
 
 	console.log("result is:"+resultHtml);
-	document.getElementById("lastNameInput").value = "";
+	document.getElementById("EnglishInput").value = "";
 	document.getElementById("input").innerHTML = resultHtml;
 	document.getElementById("Answer").innerHTML = correctLastName;
     inputElement.innerHTML = resultHtml;
