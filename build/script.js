@@ -44,37 +44,29 @@ function CheckVerbGroup(word){
 	
 }
 
+const axios = require('axios');
+const cheerio = require('cheerio');
+
 async function searchVerbTypeOnJisho(verb) {
   try {
-    const response = await fetch(`https://jisho.org/word/${verb}`);
+    const response = await axios.get(`https://jisho.org/word/${verb}`);
 
-    if (!response.ok) {
-      throw new Error('Network response was not ok.');
-    }
-
-    const html = await response.text();
-
-    // Create a DOM element from the HTML response
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    // Load the HTML content into Cheerio
+    const $ = cheerio.load(response.data);
 
     // Find the element containing verb type information
-    const verbTypeElement = doc.querySelector('.concept_light .concept_light-tag .concept_light-representation span.text');
+    const verbTypeElement = $('.concept_light .concept_light-tag .concept_light-representation span.text').first();
 
-    if (verbTypeElement) {
-      // Extract the text that contains the verb type
-      const verbType = verbTypeElement.textContent.trim();
+    // Extract the text that contains the verb type
+    const verbType = verbTypeElement.text();
 
-      // Check if it's a godan or ichidan verb based on the retrieved data
-      if (verbType.includes('Godan verb')) {
-        console.log(`${verb} is a Godan (五段) verb.`);
-      } else if (verbType.includes('Ichidan verb')) {
-        console.log(`${verb} is an Ichidan (一段) verb.`);
-      } else {
-        console.log(`Unable to determine the verb type for ${verb}.`);
-      }
+    // Check if it's a godan or ichidan verb based on the retrieved data
+    if (verbType.includes('Godan verb')) {
+      console.log(`${verb} is a Godan (五段) verb.`);
+    } else if (verbType.includes('Ichidan verb')) {
+      console.log(`${verb} is an Ichidan (一段) verb.`);
     } else {
-      console.log(`Unable to find information for ${verb}.`);
+      console.log(`Unable to determine the verb type for ${verb}.`);
     }
   } catch (error) {
     console.error('Error:', error);
