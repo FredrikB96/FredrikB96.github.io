@@ -13,7 +13,7 @@ input.addEventListener("keypress", function(event) {
 });
 
 document.getElementById("submit-button").addEventListener("click", function() {
-    CheckVerbGroup(document.getElementById("text-field").value);
+    searchVerbTypeOnJisho(document.getElementById("text-field").value);
 	
 	
 	alert('done!');
