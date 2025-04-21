@@ -356,6 +356,8 @@ function loadDefaultVocab() {
 
           // 👇 Only now show first card
           showNextCard();
+		  
+		  console.log('Loaded deck: ${selector}');
         }
       });
     })
