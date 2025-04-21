@@ -66,6 +66,7 @@ function updateTodayDate() {
 // ========== CORE FUNCTIONS ==========
 
 function startApp() {
+	console.log("initialiazed called!");
     dailyStats = loadDailyStats();
     updateModeStatsDisplay();
     showNextCard();
