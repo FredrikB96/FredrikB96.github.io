@@ -301,41 +301,67 @@ function handleFileUpload(e) {
     });
 }
 
+function resetStats() {
+  dailyStats = loadDailyStats(); // get today's stats (with mode keys reset)
+  currentCard = null;
+  currentNewCount = 0;
+  currentReviewCount = 0;
+  updateModeStatsDisplay();      // refresh UI
+}
+
+function attachEventHandlers() {
+  const directionEl = document.getElementById('direction');
+  if (directionEl && !directionEl.dataset.bound) {
+    directionEl.addEventListener('change', (e) => {
+      direction = e.target.value;
+      showNextCard();
+    });
+    directionEl.dataset.bound = true;
+  }
+}
+
 function loadDefaultVocab() {
-    const selector = document.getElementById('deckSelector');
-    const selectedDeck = selector?.value || 'ALL';
+  const selector = document.getElementById('deckSelector');
+  const selectedDeck = selector?.value || 'ALL';
 
-    localStorage.setItem('lastUsedDeck', selectedDeck); // 💾 save it
+  localStorage.setItem('lastUsedDeck', selectedDeck);
 
-    const filePath = `default-decks/${selectedDeck}.txt`;
+  const filePath = `default-decks/${selectedDeck}.txt`;
 
-    fetch(filePath)
-        .then(res => res.text())
-        .then(text => {
-            Papa.parse(text, {
-                delimiter: '\t',
-                skipEmptyLines: true,
-                complete: function ({ data }) {
-                    const saved = loadProgress();
-                    const map = new Map(saved.map(w => [w.word, w]));
+  fetch(filePath)
+    .then(res => res.text())
+    .then(text => {
+      Papa.parse(text, {
+        delimiter: '\t',
+        skipEmptyLines: true,
+        complete: function ({ data }) {
+          const saved = loadProgress();
+          const map = new Map(saved.map(w => [w.word, w]));
 
-                    vocabList = data.map(row => {
-                        if (row.length < 4) return null;
-                        const [word, english, readingRaw, grammar, , jp, , en] = row;
-                        if (!word || !english || !readingRaw) return null;
-                        const reading = extractReading(readingRaw);
-                        const entry = { word, english, reading, grammar, exampleJP: jp, exampleEN: en };
-                        return map.has(word) ? map.get(word) : createCard(entry);
-                    }).filter(Boolean);
+          vocabList = data.map(row => {
+            if (row.length < 4) return null;
+            const [word, english, readingRaw, grammar, , jp, , en] = row;
+            if (!word || !english || !readingRaw) return null;
+            const reading = extractReading(readingRaw);
+            const entry = { word, english, reading, grammar, exampleJP: jp, exampleEN: en };
+            return map.has(word) ? map.get(word) : createCard(entry);
+          }).filter(Boolean);
 
-                    document.getElementById('quizSection').classList.remove('hidden');
-                    showNextCard();
-                }
-            });
-        })
-        .catch(err => {
-            console.error(`Error loading ${selectedDeck} deck:`, err);
-            alert(`Could not load ${selectedDeck} deck file.`);
-        });
+          // Reset stats and show UI
+          resetStats();
+          document.getElementById('quizSection').classList.remove('hidden');
+
+          // ✅ Ensure controls are connected BEFORE first card
+          attachEventHandlers();
+
+          // 👇 Only now show first card
+          showNextCard();
+        }
+      });
+    })
+    .catch(err => {
+      console.error(`Error loading ${selectedDeck} deck:`, err);
+      alert(`Could not load ${selectedDeck} deck file.`);
+    });
 }
 
