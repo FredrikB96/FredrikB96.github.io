@@ -66,6 +66,7 @@ function updateTodayDate() {
 // ========== CORE FUNCTIONS ==========
 
 function startApp() {
+
     dailyStats = loadDailyStats();
     updateModeStatsDisplay();
     showNextCard();
@@ -337,7 +338,16 @@ function handleAnswer(clickedBtn, isCorrect, mode) {
     saveDailyStats();
     updateModeStatsDisplay();
 
-    document.getElementById('question').innerText += `\n🔄 New Schedule: ${new Date(currentCard.due).toLocaleDateString()}`;
+    const nextDue = currentCard.srsByMode?.[mode]?.due;
+    const dueDate = new Date(nextDue);
+    const formatted = dueDate.toLocaleDateString('en-GB');
+
+    // Calculate "in X days"
+    const now = new Date();
+    const diffTime = dueDate - now;
+    const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+    document.getElementById('question').innerHTML += `<br><span class="nextDue">🔄 New Schedule: ${formatted} (${diffDays} day${diffDays !== 1 ? 's' : ''})</span>`;
     document.getElementById('nextBtn').classList.remove('hidden');
 }
 

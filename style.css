@@ -19,6 +19,13 @@ h1 {
     margin-bottom: 20px;
     color: #222;
 }
+.nextDue {
+    font-style: italic;
+    font-size: 0.95em;
+    color: #3b3b3b;
+    display: block;
+    margin-top: 8px;
+}
 
 #counts p {
     font-weight: bold;
