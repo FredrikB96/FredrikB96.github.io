@@ -66,7 +66,6 @@ function updateTodayDate() {
 // ========== CORE FUNCTIONS ==========
 
 function startApp() {
-
     dailyStats = loadDailyStats();
     updateModeStatsDisplay();
     showNextCard();
@@ -170,14 +169,22 @@ function scheduleCard(card, grade, mode) {
 }
 
 function saveProgress() {
-    localStorage.setItem('vocabProgress', JSON.stringify(vocabList));
+    try {
+        const progress = vocabList.map(card => ({
+            word: card.word,
+            srsByMode: card.srsByMode
+        }));
+        localStorage.setItem('vocabProgress', JSON.stringify(progress));
+    } catch (e) {
+        console.warn("⚠️ Could not save progress:", e);
+    }
 }
 
 function loadProgress() {
     const data = JSON.parse(localStorage.getItem('vocabProgress') || '[]');
 
     data.forEach(card => {
-        // Auto-upgrade old format cards
+        // Defensive patch for older entries
         if (!card.srsByMode) {
             const defaultSRS = () => ({ repetitions: 0, interval: 1, ease: 2.5, due: Date.now() });
 
@@ -190,9 +197,8 @@ function loadProgress() {
         }
     });
 
-    return data;
+    return data; // Array of { word, srsByMode }
 }
-
 function extractReading(raw) {
     return raw ? raw.replace(/([^\[]*)\[([^\]]+)\]/g, (_, __, reading) => reading) : '';
 }
@@ -370,40 +376,15 @@ function handleFileUpload(e) {
             const saved = loadProgress();
             const map = new Map(saved.map(w => [w.word, w]));
 
-            vocabList = data.map(row => {
-                if (row.length < 4) return null;
-                const [word, english, readingRaw, grammar, , jp, , en] = row;
-                if (!word || !english || !readingRaw) return null;
-                const reading = extractReading(readingRaw);
-                const entry = { word, english, reading, grammar, exampleJP: jp, exampleEN: en };
-                return map.has(word) ? map.get(word) : createCard(entry);
-            }).filter(Boolean);
+            vocabList = mergeDeckWithProgress(data);
+            console.log(`Deck loaded with ${vocabList.length} entries. Matched progress for ${map.size} entries.`);
+
 
             document.getElementById('quizSection').classList.remove('hidden');
             showNextCard();
         }
     });
 }
-
-function resetStats() {
-  dailyStats = loadDailyStats(); // get today's stats (with mode keys reset)
-  currentCard = null;
-  currentNewCount = 0;
-  currentReviewCount = 0;
-  updateModeStatsDisplay();      // refresh UI
-}
-
-function attachEventHandlers() {
-  const directionEl = document.getElementById('direction');
-  if (directionEl && !directionEl.dataset.bound) {
-    directionEl.addEventListener('change', (e) => {
-      direction = e.target.value;
-      showNextCard();
-    });
-    directionEl.dataset.bound = true;
-  }
-}
-
 function loadDefaultVocab() {
   const selector = document.getElementById('deckSelector');
   const selectedDeck = selector?.value || 'ALL';
@@ -413,9 +394,6 @@ function loadDefaultVocab() {
   const filePath = `default-decks/${selectedDeck}.txt`;
   
   console.log(`Loaded deck: ${selectedDeck}`);
-
-
-
 
   fetch(filePath)
     .then(res => res.text())
@@ -427,14 +405,9 @@ function loadDefaultVocab() {
           const saved = loadProgress();
           const map = new Map(saved.map(w => [w.word, w]));
 
-          vocabList = data.map(row => {
-            if (row.length < 4) return null;
-            const [word, english, readingRaw, grammar, , jp, , en] = row;
-            if (!word || !english || !readingRaw) return null;
-            const reading = extractReading(readingRaw);
-            const entry = { word, english, reading, grammar, exampleJP: jp, exampleEN: en };
-            return map.has(word) ? map.get(word) : createCard(entry);
-          }).filter(Boolean);
+          vocabList = mergeDeckWithProgress(data);
+            console.log(`Deck loaded with ${vocabList.length} entries. Matched progress for ${map.size} entries.`);
+
 
           // Reset stats and show UI
           resetStats();
@@ -455,3 +428,45 @@ function loadDefaultVocab() {
     });
 }
 
+// Helpers
+
+function mergeDeckWithProgress(data) {
+    const saved = loadProgress();
+    const map = new Map(saved.map(w => [w.word, w]));
+
+    return data.map(row => {
+        if (row.length < 4) return null;
+        const [word, english, readingRaw, grammar, , jp, , en] = row;
+        if (!word || !english || !readingRaw) return null;
+
+        const reading = extractReading(readingRaw);
+        const entry = { word, english, reading, grammar, exampleJP: jp, exampleEN: en };
+        const card = createCard(entry);
+
+        const existing = map.get(word);
+        if (existing) {
+            card.srsByMode = existing.srsByMode;
+        }
+
+        return card;
+    }).filter(Boolean);
+}
+
+function resetStats() {
+    dailyStats = loadDailyStats(); // get today's stats (with mode keys reset)
+    currentCard = null;
+    currentNewCount = 0;
+    currentReviewCount = 0;
+    updateModeStatsDisplay();      // refresh UI
+}
+
+function attachEventHandlers() {
+    const directionEl = document.getElementById('direction');
+    if (directionEl && !directionEl.dataset.bound) {
+        directionEl.addEventListener('change', (e) => {
+            direction = e.target.value;
+            showNextCard();
+        });
+        directionEl.dataset.bound = true;
+    }
+}
