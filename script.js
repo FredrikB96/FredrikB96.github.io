@@ -328,7 +328,7 @@ function loadDefaultVocab() {
 
   const filePath = `default-decks/${selectedDeck}.txt`;
   
-  console.log(`Loaded deck: ${selectedDeck}`);
+  console.log(`Loaded deck: ${selector.value}`);
 
 
   fetch(filePath)
