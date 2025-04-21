@@ -206,6 +206,7 @@ function showNextCard() {
 		  break;
 		case '2':
 		  optionCandidate = rand.reading;
+		  if (rand.word === rand.reading) continue;
 		  break;
 		case '3':
 		  optionCandidate = rand.english;
