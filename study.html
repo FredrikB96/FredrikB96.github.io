@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anki Vocab Quiz</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="container">
+        <h1>Anki-Style Japanese Vocab Quiz</h1>
+        <div id="counts">
+            <p>New Cards Today: <span id="newCount">0</span>/<span id="maxNew">20</span></p>
+            <p>Review Cards Today: <span id="reviewCount">0</span>/<span id="maxReview">100</span></p>
+            <input type="file" id="csvFile" accept=".csv,.txt" />
+        </div>
+        <div class="controls">
+            <label>
+                Direction:
+                <select id="direction">
+                    <option value="jp-en">JP → EN</option>
+                    <option value="en-jp">EN → JP</option>
+                </select>
+            </label>
+
+            <label>
+                Quiz Mode:
+                <select id="quizMode">
+                    <option value="random">🎲 Random</option>
+                    <option value="1">EN → Kanji</option>
+                    <option value="2">Kanji → Reading</option>
+                    <option value="3">Kanji → English</option>
+                </select>
+            </label>
+
+            <label>
+                Show Reading + Grammar
+                <input type="checkbox" id="showHints" />
+            </label>
+
+            <label>
+                Show Example Sentence
+                <input type="checkbox" id="showExample" />
+            </label>
+        </div>
+
+        <div id="quizSection" class="hidden">
+            <div id="question" class="question-box"></div>
+            <div id="choices" class="choices-container"></div>
+            <div id="hints" class="hidden"></div>
+            <div id="example" class="hidden"></div>
+            <button id="nextBtn" class="hidden">Next</button>
+        </div>
+    </div>
+
+    <div id="ScheduleSettings">
+        <h3>Backup & Restore</h3>
+        <button id="downloadBackupBtn">📥 Export Progress</button>
+        <input type="file" id="uploadBackupInput" accept=".json" />
+        <label for="uploadBackupInput" class="upload-label">📤 Import Progress</label>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
