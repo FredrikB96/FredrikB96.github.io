@@ -305,3 +305,34 @@ document.getElementById('uploadBackupInput').addEventListener('change', (e) => {
     };
     reader.readAsText(file);
 });
+
+document.getElementById('loadDefaultBtn').addEventListener('click', () => {
+  fetch('default-vocab.txt')
+    .then(response => response.text())
+    .then(data => {
+      Papa.parse(data, {
+        delimiter: '\t',
+        skipEmptyLines: true,
+        complete: function (results) {
+          const saved = loadProgress();
+          const map = new Map(saved.map((w) => [w.word, w]));
+
+          vocabList = results.data.map((row) => {
+            const [word, english, readingRaw, grammar, , exampleJP, , exampleEN] = row;
+            const reading = extractReading(readingRaw);
+            const entry = { word, english, reading, grammar, exampleJP, exampleEN };
+            return map.has(word) ? map.get(word) : createCard(entry);
+          });
+
+          document.getElementById('quizSection').classList.remove('hidden');
+          showNextCard();
+          updateNewLeftCount();
+        }
+      });
+    })
+    .catch(err => {
+      console.error("Failed to load default vocab file:", err);
+      alert("Failed to load default vocab file.");
+    });
+	document.getElementById('loadDefaultBtn').classList.add('hidden');
+});
