@@ -327,6 +327,9 @@ function loadDefaultVocab() {
   localStorage.setItem('lastUsedDeck', selectedDeck);
 
   const filePath = `default-decks/${selectedDeck}.txt`;
+  
+  console.log(`Loaded deck: ${selectedDeck}`);
+
 
   fetch(filePath)
     .then(res => res.text())
@@ -357,7 +360,6 @@ function loadDefaultVocab() {
           // 👇 Only now show first card
           showNextCard();
 		  
-		  console.log('Loaded deck: ${selector}');
         }
       });
     })
