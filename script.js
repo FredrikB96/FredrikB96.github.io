@@ -6,6 +6,8 @@ let showHints = false;
 let showExample = false;
 const maxNewByMode = { "1": 10, "2": 10, "3": 10, "4": 10 };
 let dailyStats;
+let isVocabLoaded = false;
+
 
 // ========== UI SETUP ==========
 document.getElementById('quizMode').addEventListener('change', (e) => {
@@ -202,7 +204,12 @@ function showNextCard() {
         return !isNew && isDue && dailyStats.reviewShown < 100;
     });
 
-    if (!dueWords.length) return alert("No cards due! Come back later.");
+    if (!dueWords.length) {
+	  if (isVocabLoaded) {
+		alert("No cards due! Come back later.");
+	  }
+	  return;
+	}
 
     currentCard = dueWords[Math.floor(Math.random() * dueWords.length)];
     const isNew = currentCard.repetitions === 0;
@@ -323,7 +330,7 @@ function attachEventHandlers() {
 function loadDefaultVocab() {
   const selector = document.getElementById('deckSelector');
   const selectedDeck = selector?.value || 'ALL';
-
+  isVocabLoaded = true;
   localStorage.setItem('lastUsedDeck', selectedDeck);
 
   const filePath = `default-decks/${selectedDeck}.txt`;

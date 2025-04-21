@@ -1,6 +1,5 @@
 body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #f7f8fa;
+	font-family: "Noto Sans JP", "Yu Gothic UI", "Meiryo", sans-serif;    background-color: #f7f8fa;
     color: #333;
     margin: 0;
     padding: 20px;
@@ -74,11 +73,12 @@ h1 {
 
     .choices-container button {
         padding: 12px 16px;
-        font-size: 16px;
+        font-size: 28px;
         border: 2px solid transparent;
         border-radius: 8px;
-        background-color: #e5e7eb;
-        cursor: pointer;
+	    background-color: #f0f4f8;
+	    color: #222;
+      	cursor: pointer;
         transition: background-color 0.2s, border 0.2s;
     }
 
