@@ -98,6 +98,33 @@ h1 {
             color: #991b1b;
         }
 
+.choices-container button.selected {
+  border: 2px solid #3b82f6;
+  box-shadow: 0 0 4px #60a5fa;
+}
+
+#statsToggleWrapper {
+  margin-top: 1em;
+  padding: 1em;
+  background: #f9fafb;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+#statsToggleWrapper button {
+  margin-bottom: 0.5em;
+  padding: 8px 14px;
+  font-size: 14px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#statsToggleWrapper button:hover {
+  background-color: #2563eb;
+}
 
 #hints, #example {
     margin-top: 12px;

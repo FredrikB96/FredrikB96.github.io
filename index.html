@@ -10,31 +10,64 @@
     <div class="container">
         <h1>Anki-Style Japanese Vocab Quiz</h1>
         <div id="counts">
-            <p>New Cards Today: <span id="newCount">0</span>/<span id="maxNew">20</span></p>
-            <p>Review Cards Today: <span id="reviewCount">0</span>/<span id="maxReview">100</span></p>
-			<p>Total New Cards Remaining: <span id="newLeftCount">...</span></p>
-            <input type="file" id="csvFile" accept=".csv,.txt" />
-			<button id="loadDefaultBtn">📂 Load Default Deck</button>
+            <div id="statsToggleWrapper">
+                <button id="toggleStatsBtn">📊 Show Stats</button>
+                <div id="perModeStats" class="hidden">
+                    <p>New Cards & Reviews this Session (by mode):</p>
+                    <ul>
+                        <li>
+                            EN → Kanji: <span id="mode1Count">0</span>/<span id="mode1Max">10</span>
+                            | Reviews: <span id="mode1ReviewCount">0</span>/<span id="mode1ReviewMax">100</span>
+                        </li>
+                        <li>
+                            Kanji → Reading: <span id="mode2Count">0</span>/<span id="mode2Max">10</span>
+                            | Reviews: <span id="mode2ReviewCount">0</span>/<span id="mode2ReviewMax">100</span>
+                        </li>
+                        <li>
+                            Kanji → English: <span id="mode3Count">0</span>/<span id="mode3Max">10</span>
+                            | Reviews: <span id="mode3ReviewCount">0</span>/<span id="mode3ReviewMax">100</span>
+                        </li>
+                        <li>
+                            Sentence → Translation: <span id="mode4Count">0</span>/<span id="mode4Max">10</span>
+                            | Reviews: <span id="mode4ReviewCount">0</span>/<span id="mode4ReviewMax">100</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <input type="file" id="csvFile" accept=".csv,.txt"/>
+            <label for="deckSelector">📚 Select Deck:</label>
+            <select id="deckSelector">
+                <option value="N5">N5</option>
+                <option value="N4">N4</option>
+                <option value="N3">N3</option>
+                <option value="N2">N2</option>
+                <option value="N1">N1</option>
+                <option value="Core">N1+</option>
+                <option value="ALL" selected>ALL</option>
+            </select>
+            <button id="loadDefaultBtn">📂 Load Deck</button>
         </div>
         <div class="controls">
+			<div id="ModeSelector">
             <label>
+                Quiz Mode:
+                <select id="quizMode">
+                    <option value="random">🎲 Random</option>
+                    <option value="1">English → Kanji</option>
+                    <option value="2">Kanji → Reading</option>
+                    <option value="3">Kanji → English</option>
+					<option value="4">Sentence -> Translation </option>
+                </select>
+            </label>
+			<label id="directionWrapper" class="hidden">
                 Direction:
                 <select id="direction">
                     <option value="jp-en">JP → EN</option>
                     <option value="en-jp">EN → JP</option>
                 </select>
             </label>
-
-            <label>
-                Quiz Mode:
-                <select id="quizMode">
-                    <option value="random">🎲 Random</option>
-                    <option value="1">EN → Kanji</option>
-                    <option value="2">Kanji → Reading</option>
-                    <option value="3">Kanji → English</option>
-                </select>
-            </label>
-
+			</div>
+			<div>
             <label>
                 Show Reading + Grammar
                 <input type="checkbox" id="showHints" />
@@ -44,6 +77,7 @@
                 Show Example Sentence
                 <input type="checkbox" id="showExample" />
             </label>
+			</div>
         </div>
 
         <div id="quizSection" class="hidden">
