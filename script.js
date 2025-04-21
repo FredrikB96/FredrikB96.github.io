@@ -51,12 +51,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function updateTodayDate() {
+    const today = new Date();
+    const formatted = today.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short'
+    });
+
+    document.getElementById('todayDate').innerText = formatted;
+}
+
 // ========== CORE FUNCTIONS ==========
 
 function startApp() {
     dailyStats = loadDailyStats();
     updateModeStatsDisplay();
     showNextCard();
+    updateTodayDate();
 }
 
 window.addEventListener('DOMContentLoaded', startApp);
