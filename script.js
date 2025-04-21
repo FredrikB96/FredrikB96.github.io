@@ -5,6 +5,7 @@ let quizMode = 'random';
 let showHints = false;
 let showExample = false;
 const maxNewByMode = { "1": 10, "2": 10, "3": 10, "4": 10 };
+const maxReviewByMode = { "1": 100, "2": 100, "3": 100, "4": 100 };
 let dailyStats;
 let isVocabLoaded = false;
 
@@ -61,18 +62,26 @@ function startApp() {
 window.addEventListener('DOMContentLoaded', startApp);
 
 function updateModeStatsDisplay() {
-    for (let mode of ["1", "2", "3", "4"]) {
-        const newCountEl = document.getElementById(`mode${mode}Count`);
-        const newMaxEl = document.getElementById(`mode${mode}Max`);
-        const revCountEl = document.getElementById(`mode${mode}ReviewCount`);
-        const revMaxEl = document.getElementById(`mode${mode}ReviewMax`);
+    ["1", "2", "3", "4"].forEach(mode => {
+        const newDue = vocabList.filter(card => {
+            const srs = card.srsByMode?.[mode];
+            return srs && srs.repetitions === 0 && srs.due <= Date.now();
+        }).length;
 
-        if (newCountEl) newCountEl.innerText = dailyStats.newShownByMode[mode] || 0;
-        if (newMaxEl) newMaxEl.innerText = maxNewByMode[mode];
+        const reviewDue = vocabList.filter(card => {
+            const srs = card.srsByMode?.[mode];
+            return srs && srs.repetitions > 0 && srs.due <= Date.now();
+        }).length;
 
-        if (revCountEl) revCountEl.innerText = dailyStats.reviewShownByMode[mode] || 0;
-        if (revMaxEl) revMaxEl.innerText = 100;
-    }
+        const maxNew = Math.min(newDue, maxNewByMode[mode]);
+        const maxReview = Math.min(reviewDue, 100);
+
+        document.getElementById(`mode${mode}Count`).innerText = dailyStats.newShownByMode?.[mode] || 0;
+        document.getElementById(`mode${mode}Max`).innerText = maxNew;
+
+        document.getElementById(`mode${mode}ReviewCount`).innerText = dailyStats.reviewShownByMode?.[mode] || 0;
+        document.getElementById(`mode${mode}ReviewMax`).innerText = maxReview;
+    });
 }
 
 
@@ -81,48 +90,68 @@ function loadDailyStats() {
     let stats = JSON.parse(localStorage.getItem('dailyStats') || '{}');
 
     if (stats.date !== today) {
-        stats.date = today;
+        stats = {
+            date: today,
+            newShownByMode: {},
+            reviewShownByMode: {}
+        };
     }
 
-    stats.newShownByMode = stats.newShownByMode || {};
-    stats.reviewShownByMode = stats.reviewShownByMode || {};
-
+    // Ensure all 4 mode keys exist
     ["1", "2", "3", "4"].forEach(m => {
-        if (!(m in stats.newShownByMode)) stats.newShownByMode[m] = 0;
-        if (!(m in stats.reviewShownByMode)) stats.reviewShownByMode[m] = 0;
+        stats.newShownByMode ||= {};
+        stats.reviewShownByMode ||= {};
+
+        stats.newShownByMode[m] ||= 0;
+        stats.reviewShownByMode[m] ||= 0;
     });
 
     localStorage.setItem('dailyStats', JSON.stringify(stats));
     return stats;
 }
 
-
 function saveDailyStats() {
     localStorage.setItem('dailyStats', JSON.stringify(dailyStats));
 }
 
 function createCard(entry) {
-    return {
-        ...entry,
+    const defaultSRS = () => ({
+        repetitions: 0,
         interval: 1,
         ease: 2.5,
-        repetitions: 0,
         due: Date.now()
+    });
+
+    return {
+        ...entry,
+        srsByMode: {
+            "1": defaultSRS(),
+            "2": defaultSRS(),
+            "3": defaultSRS(),
+            "4": defaultSRS()
+        }
     };
 }
 
-function scheduleCard(card, grade) {
+function scheduleCard(card, grade, mode) {
+    const srs = card.srsByMode[mode];
+
     if (grade < 3) {
-        card.repetitions = 0;
-        card.interval = 1;
+        srs.repetitions = 0;
+        srs.interval = 1;
     } else {
-        card.repetitions++;
-        card.interval = card.repetitions === 1 ? 1 :
-            card.repetitions === 2 ? 6 :
-                Math.round(card.interval * card.ease);
-        card.ease = Math.max(1.3, card.ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
+        srs.repetitions++;
+        if (srs.repetitions === 1) {
+            srs.interval = 1;
+        } else if (srs.repetitions === 2) {
+            srs.interval = 6;
+        } else {
+            srs.interval = Math.round(srs.interval * srs.ease);
+        }
+        srs.ease = Math.max(1.3, srs.ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
     }
-    card.due = Date.now() + card.interval * 86400000;
+
+    srs.due = Date.now() + srs.interval * 86400000;
     saveProgress();
 }
 
@@ -131,8 +160,23 @@ function saveProgress() {
 }
 
 function loadProgress() {
-    const data = localStorage.getItem('vocabProgress');
-    return data ? JSON.parse(data) : [];
+    const data = JSON.parse(localStorage.getItem('vocabProgress') || '[]');
+
+    data.forEach(card => {
+        // Auto-upgrade old format cards
+        if (!card.srsByMode) {
+            const defaultSRS = () => ({ repetitions: 0, interval: 1, ease: 2.5, due: Date.now() });
+
+            card.srsByMode = {
+                "1": defaultSRS(),
+                "2": defaultSRS(),
+                "3": defaultSRS(),
+                "4": defaultSRS()
+            };
+        }
+    });
+
+    return data;
 }
 
 function extractReading(raw) {
@@ -193,22 +237,31 @@ function renderChoices(options, correctAnswer, mode) {
 function showNextCard() {
     const mode = quizMode === 'random' ? getRandomMode() : quizMode;
     dailyStats = loadDailyStats();
-    const maxNew = maxNewByMode[mode];
+    //const maxNew = maxNewByMode[mode];
     const newShown = dailyStats.newShownByMode[mode] || 0;
 
     const dueWords = vocabList.filter(card => {
-        const isNew = card.repetitions === 0;
-        const isDue = card.due <= Date.now();
+        const srs = card.srsByMode[mode];
+        if (!srs) return false;
+
+        const isNew = srs.repetitions === 0;
+        const isDue = srs.due <= Date.now();
+
+        // Skip katakana-style (non-kanji) words in mode 2
         if (mode === "2" && card.word === card.reading) return false;
-        if (isNew && newShown < maxNew && isDue) return true;
-        return !isNew && isDue && dailyStats.reviewShown < 100;
+
+        // Respect new/review limits
+        if (isNew && dailyStats.newShownByMode[mode] < maxNewByMode[mode] && isDue) return true;
+        if (!isNew && dailyStats.reviewShownByMode[mode] < maxReviewByMode[mode] && isDue) return true;
+
+        return false;
     });
 
     if (!dueWords.length) {
 	  if (isVocabLoaded) {
-		alert("No cards due! Come back later.");
+          alert("No cards due! Come back later.");
 	  }
-	  return;
+	   return;
 	}
 
     currentCard = dueWords[Math.floor(Math.random() * dueWords.length)];
@@ -261,7 +314,7 @@ function handleAnswer(clickedBtn, isCorrect, mode) {
 
     clickedBtn.classList.add('selected'); // 👇 adds visual border to the one clicked
 
-    scheduleCard(currentCard, isCorrect ? 5 : 2);
+    scheduleCard(currentCard, isCorrect ? 5 : 2, mode);
 
     console.log(`[DEBUG] [HandleAnswer] Status: ${isNew ? 'NEW' : 'REVIEW'}`);
 
@@ -285,6 +338,7 @@ function getRandomMode() {
 
 function handleFileUpload(e) {
     const file = e.target.files[0];
+    isVocabLoaded = true;
     if (!file) return;
     Papa.parse(file, {
         delimiter: '\t',
@@ -336,6 +390,7 @@ function loadDefaultVocab() {
   const filePath = `default-decks/${selectedDeck}.txt`;
   
   console.log(`Loaded deck: ${selectedDeck}`);
+
 
 
 
