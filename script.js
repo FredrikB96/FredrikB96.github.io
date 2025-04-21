@@ -11,6 +11,12 @@ let currentNewCount = 0;
 let currentReviewCount = 0;
 
 
+function updateNewLeftCount() {
+  const remaining = vocabList.filter(card => card.repetitions === 0).length;
+  document.getElementById('newLeftCount').innerText = remaining;
+}
+
+
 let quizMode = 'random';
 document.getElementById('quizMode').addEventListener('change', (e) => {
   quizMode = e.target.value;
@@ -34,6 +40,8 @@ function loadDailyStats() {
     localStorage.setItem('dailyStats', JSON.stringify(resetStats));
     return resetStats;
   }
+  
+  updateNewLeftCount();
 
   return stored;
 }
@@ -198,6 +206,8 @@ let hint = '';
 	  if (!options.includes(optionCandidate)) {
 		options.push(optionCandidate);
 	  }
+	  
+	  updateNewLeftCount();
 	}
 
   options = shuffleArray(options);
