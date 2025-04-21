@@ -207,7 +207,6 @@ let hint = '';
 		options.push(optionCandidate);
 	  }
 	  
-	  updateNewLeftCount();
 	}
 
   options = shuffleArray(options);
@@ -233,33 +232,46 @@ let hint = '';
 
 	document.getElementById('hints').textContent = hint;
 	document.getElementById('example').textContent = `JP: ${currentCard.exampleJP}\nEN: ${currentCard.exampleEN}`;
+    updateNewLeftCount();
 
 }
 
-function handleAnswer(elem, correct) {
-    const choices = document.querySelectorAll('#choices li');
-    choices.forEach((li) => {
-        li.classList.add(li.innerText === (direction === 'jp-en' ? currentCard.english : currentCard.word) ? 'correct' : 'wrong');
-        li.style.pointerEvents = 'none'; // makes it unclickable
-        li.removeEventListener('click', handleAnswer);
-    });
-
-    scheduleCard(currentCard, correct ? 5 : 2);
-    const isNew = currentCard.repetitions === 0;
-    if (isNew) {
-        dailyStats.newShown++;
-        currentNewCount++;
+function handleAnswer(clickedButton, isCorrect) {
+  const buttons = document.querySelectorAll('#choices button');
+  buttons.forEach((btn) => {
+    if (btn === clickedButton && isCorrect) {
+      btn.classList.add('correct');
+    } else if (btn !== clickedButton && btn.textContent === currentCard.word || btn.textContent === currentCard.english || btn.textContent === currentCard.reading) {
+      btn.classList.add('correct');
     } else {
-        dailyStats.reviewShown++;
-        currentReviewCount++;
+      btn.classList.add('wrong');
     }
+    btn.style.pointerEvents = 'none';
+  });
+  
+  buttons.forEach((btn) => {
+	if(btn == clickedButton){
+		btn.style.border = "solid";
+	}		
+  });
 
-    saveDailyStats();
+  scheduleCard(currentCard, isCorrect ? 5 : 2);
 
-    const dueDate = new Date(currentCard.due).toLocaleDateString();
-    document.getElementById('question').innerText += `\n🔄 New Schedule: ${dueDate}`;
+  const isNew = currentCard.repetitions === 0;
+  if (isNew) {
+    dailyStats.newShown++;
+    currentNewCount++;
+  } else {
+    dailyStats.reviewShown++;
+    currentReviewCount++;
+  }
 
-    document.getElementById('nextBtn').classList.remove('hidden');
+  saveDailyStats();
+
+  const dueDate = new Date(currentCard.due).toLocaleDateString();
+  document.getElementById('question').innerText += `\n🔄 New Schedule: ${dueDate}`;
+
+  document.getElementById('nextBtn').classList.remove('hidden');
 }
 
 document.getElementById('nextBtn').addEventListener('click', () => {
@@ -287,6 +299,7 @@ document.getElementById('uploadBackupInput').addEventListener('change', (e) => {
     const reader = new FileReader();
     reader.onload = () => {
         vocabList = JSON.parse(reader.result);
+	    updateNewLeftCount();
         saveProgress();
         showNextCard();
     };
