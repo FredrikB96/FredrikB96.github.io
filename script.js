@@ -163,9 +163,18 @@ function showNextCard() {
     const isNew = currentCard.repetitions === 0;
 	const mode = quizMode === 'random' ? getRandomMode() : quizMode;
 	let questionText = '';
-let correctAnswer = '';
-let hint = '';
-
+	let correctAnswer = '';
+	let hint = '';
+	
+	if (mode === '2') {
+		// Remove entries where word === reading
+		for (let i = dueWords.length - 1; i >= 0; i--) {
+			if (dueWords[i].word === dueWords[i].reading) {
+			dueWords.splice(i, 1);
+			}
+		}
+	}
+	
 	switch (mode) {
 	  case '1':
 		questionText = currentCard.english;
