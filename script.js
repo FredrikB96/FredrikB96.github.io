@@ -225,10 +225,11 @@ function generateOptions(correct,grammar, mode) {
     const direction = document.getElementById('direction').value;
     let options = [correct], tries = 0;
 
-    while (options.length < 5 && tries < 300) {
-        const rand = vocabList[Math.floor(Math.random() * vocabList.length)];
-        if(rand.grammar === grammar) {
-            console.log(`[DEBUG] candidate card grammar: ${rand.grammar}`);
+    const pool = vocabList.filter(card => card.grammar === grammar );
+
+    while (options.length < 5 && tries < 100) {
+        const rand = pool[Math.floor(Math.random() * pool.length)];
+        console.log(`[DEBUG] candidate card grammar: ${rand.grammar}`);
 
             let candidate = '';
             switch (mode) {
@@ -239,10 +240,7 @@ function generateOptions(correct,grammar, mode) {
             }
 
             if (candidate && !options.includes(candidate)) options.push(candidate);
-            tries++;
-        } else {
-            tries++;
-        }        
+            tries++;   
     }
 
     return shuffleArray(options);
