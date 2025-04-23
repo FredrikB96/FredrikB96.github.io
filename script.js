@@ -221,23 +221,28 @@ function getCardPrompt(card, mode) {
     }
 }
 
-function generateOptions(correct, mode) {
+function generateOptions(correct,grammar, mode) {
     const direction = document.getElementById('direction').value;
     let options = [correct], tries = 0;
 
-    while (options.length < 5 && tries < 100) {
+    while (options.length < 5 && tries < 300) {
         const rand = vocabList[Math.floor(Math.random() * vocabList.length)];
-        let candidate = '';
+        if(rand.grammar === grammar) {
+            console.log(`[DEBUG] candidate card grammar: ${rand.grammar}`);
 
-        switch (mode) {
-            case "1": candidate = rand.word; break;
-            case "2": if (rand.word === rand.reading) continue; candidate = rand.reading; break;
-            case "3": candidate = rand.english; break;
-            case "4": candidate = direction === 'jp-en' ? rand.exampleEN : rand.exampleJP; break;
-        }
+            let candidate = '';
+            switch (mode) {
+                case "1": candidate = rand.word; break;
+                case "2": if (rand.word === rand.reading) continue; candidate = rand.reading; break;
+                case "3": candidate = rand.english; break;
+                case "4": candidate = direction === 'jp-en' ? rand.exampleEN : rand.exampleJP; break;
+            }
 
-        if (candidate && !options.includes(candidate)) options.push(candidate);
-        tries++;
+            if (candidate && !options.includes(candidate)) options.push(candidate);
+            tries++;
+        } else {
+            tries++;
+        }        
     }
 
     return shuffleArray(options);
@@ -287,11 +292,13 @@ function showNextCard() {
     currentCard = dueWords[Math.floor(Math.random() * dueWords.length)];
     const isNew = currentCard.repetitions === 0;
     console.log(`[DEBUG] Selected card: ${currentCard.word}`);
+    console.log(`[DEBUG] Selected card grammar: ${currentCard.grammar}`);
+
     console.log(`[DEBUG] Status: ${isNew ? 'NEW' : 'REVIEW'}`);
 
 
     const [question, correctAnswer, hint] = getCardPrompt(currentCard, mode);
-    const options = generateOptions(correctAnswer, mode);
+    const options = generateOptions(correctAnswer,currentCard.grammar, mode);
 
     document.getElementById('question').innerText = question;
     document.getElementById('hints').textContent = hint;
