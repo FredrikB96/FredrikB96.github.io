@@ -127,25 +127,6 @@ function saveDailyStats() {
     localStorage.setItem('dailyStats', JSON.stringify(dailyStats));
 }
 
-function createCard(entry) {
-    const defaultSRS = () => ({
-        repetitions: 0,
-        interval: 1,
-        ease: 2.5,
-        due: Date.now()
-    });
-
-    return {
-        ...entry,
-        srsByMode: {
-            "1": defaultSRS(),
-            "2": defaultSRS(),
-            "3": defaultSRS(),
-            "4": defaultSRS()
-        }
-    };
-}
-
 function scheduleCard(card, grade, mode) {
     const srs = card.srsByMode[mode];
 
@@ -261,13 +242,13 @@ function showNextCard() {
     const mode = quizMode === 'random' ? getRandomMode() : quizMode;
     dailyStats = loadDailyStats();
     //const maxNew = maxNewByMode[mode];
-    const newShown = dailyStats.newShownByMode[mode] || 0;
+    //const newShown = dailyStats.newShownByMode[mode] || 0;
 
     const dueWords = vocabList.filter(card => {
         const srs = card.srsByMode[mode];
         if (!srs) return false;
 
-        const isNew = srs.repetitions === 0;
+        const isNew = card.srsByMode[mode]?.repetitions === 0;
         const isDue = srs.due <= Date.now();
 
         // Skip katakana-style (non-kanji) words in mode 2
@@ -288,7 +269,7 @@ function showNextCard() {
 	}
 
     currentCard = dueWords[Math.floor(Math.random() * dueWords.length)];
-    const isNew = currentCard.repetitions === 0;
+    const isNew = currentCard.srsByMode[mode]?.repetitions === 0;
     console.log(`[DEBUG] Selected card: ${currentCard.word}`);
     console.log(`[DEBUG] Selected card grammar: ${currentCard.grammar}`);
 
@@ -321,7 +302,7 @@ function getCorrectAnswerText(mode) {
 }
 
 function handleAnswer(clickedBtn, isCorrect, mode) {
-    const isNew = currentCard.repetitions === 0; //
+    const isNew = currentCard.srsByMode[mode]?.repetitions === 0;
     const correctAnswer = clickedBtn.textContent;
 
     const buttons = document.querySelectorAll('#choices button');
@@ -372,8 +353,10 @@ function getRandomMode() {
 
 function handleFileUpload(e) {
     const file = e.target.files[0];
-    isVocabLoaded = true;
     if (!file) return;
+
+    isVocabLoaded = true;
+
     Papa.parse(file, {
         delimiter: '\t',
         skipEmptyLines: true,
@@ -381,57 +364,99 @@ function handleFileUpload(e) {
             const saved = loadProgress();
             const map = new Map(saved.map(w => [w.word, w]));
 
-            vocabList = mergeDeckWithProgress(data);
+            vocabList = data.map(row => {
+                if (row.length < 4) return null;
+                const [word, english, readingRaw, grammar, wordType, jp, , en] = row;
+                if (!word || !english || !readingRaw) return null;
+
+                const reading = extractReading(readingRaw);
+                const entry = {
+                    word,
+                    english,
+                    reading,
+                    grammar,
+                    wordType,
+                    exampleJP: jp,
+                    exampleEN: en
+                };
+
+                // Merge SRS progress if it exists
+                const existing = map.get(word);
+                if (existing?.srsByMode) {
+                    entry.srsByMode = existing.srsByMode;
+                }
+
+                return createCard(entry);
+            }).filter(Boolean);
+
             console.log(`Deck loaded with ${vocabList.length} entries. Matched progress for ${map.size} entries.`);
 
-
+            resetStats();
             document.getElementById('quizSection').classList.remove('hidden');
+            attachEventHandlers();
             showNextCard();
         }
     });
 }
+
+
 function loadDefaultVocab() {
-  const selector = document.getElementById('deckSelector');
-  const selectedDeck = selector?.value || 'ALL';
-  isVocabLoaded = true;
-  localStorage.setItem('lastUsedDeck', selectedDeck);
+    const selector = document.getElementById('deckSelector');
+    const selectedDeck = selector?.value || 'ALL';
+    isVocabLoaded = true;
+    localStorage.setItem('lastUsedDeck', selectedDeck);
 
-  const filePath = `default-decks/${selectedDeck}.txt`;
-  
-  console.log(`Loaded deck: ${selectedDeck}`);
+    const filePath = `default-decks/${selectedDeck}.txt`;
+    console.log(`Loaded deck: ${selectedDeck}`);
 
-  fetch(filePath)
-    .then(res => res.text())
-    .then(text => {
-      Papa.parse(text, {
-        delimiter: '\t',
-        skipEmptyLines: true,
-        complete: function ({ data }) {
-          const saved = loadProgress();
-          const map = new Map(saved.map(w => [w.word, w]));
+    fetch(filePath)
+        .then(res => res.text())
+        .then(text => {
+            Papa.parse(text, {
+                delimiter: '\t',
+                skipEmptyLines: true,
+                complete: function ({ data }) {
+                    const saved = loadProgress();
+                    const map = new Map(saved.map(w => [w.word, w]));
 
-          vocabList = mergeDeckWithProgress(data);
-            console.log(`Deck loaded with ${vocabList.length} entries. Matched progress for ${map.size} entries.`);
+                    vocabList = data.map(row => {
+                        if (row.length < 4) return null;
+                        const [word, english, readingRaw, grammar, wordType, jp, , en] = row;
+                        if (!word || !english || !readingRaw) return null;
 
+                        const reading = extractReading(readingRaw);
+                        const entry = {
+                            word,
+                            english,
+                            reading,
+                            grammar,
+                            wordType,
+                            exampleJP: jp,
+                            exampleEN: en
+                        };
 
-          // Reset stats and show UI
-          resetStats();
-          document.getElementById('quizSection').classList.remove('hidden');
+                        // Merge SRS progress if it exists
+                        const existing = map.get(word);
+                        if (existing?.srsByMode) {
+                            entry.srsByMode = existing.srsByMode;
+                        }
 
-          // ✅ Ensure controls are connected BEFORE first card
-          attachEventHandlers();
+                        return createCard(entry);
+                    }).filter(Boolean);
 
-          // 👇 Only now show first card
-          showNextCard();
-		  
-        }
-      });
-    })
-    .catch(err => {
-      console.error(`Error loading ${selectedDeck} deck:`, err);
-      alert(`Could not load ${selectedDeck} deck file.`);
-    });
+                    resetStats();
+                    document.getElementById('quizSection').classList.remove('hidden');
+                    attachEventHandlers();
+                    showNextCard();
+                }
+            });
+        })
+        .catch(err => {
+            console.error(`Error loading ${selectedDeck} deck:`, err);
+            alert(`Could not load ${selectedDeck} deck file.`);
+        });
 }
+
 
 // Helpers
 
@@ -441,19 +466,26 @@ function mergeDeckWithProgress(data) {
 
     return data.map(row => {
         if (row.length < 4) return null;
-        const [word, english, readingRaw, grammar, , jp, , en] = row;
+        const [word, english, readingRaw, grammar, wordType, jp, , en] = row;
         if (!word || !english || !readingRaw) return null;
 
         const reading = extractReading(readingRaw);
-        const entry = { word, english, reading, grammar, exampleJP: jp, exampleEN: en };
-        const card = createCard(entry);
+        const entry = {
+            word,
+            english,
+            reading,
+            grammar,
+            wordType,
+            exampleJP: jp,
+            exampleEN: en
+        };
 
         const existing = map.get(word);
-        if (existing) {
-            card.srsByMode = existing.srsByMode;
+        if (existing?.srsByMode) {
+            entry.srsByMode = existing.srsByMode;
         }
 
-        return card;
+        return createCard(entry);  // ensures srsByMode fallback if missing
     }).filter(Boolean);
 }
 
@@ -474,4 +506,27 @@ function attachEventHandlers() {
         });
         directionEl.dataset.bound = true;
     }
+}
+
+function createCard(entry) {
+    const defaultSRS = () => ({
+        repetitions: 0,
+        interval: 1,
+        ease: 2.5,
+        due: Date.now()
+    });
+
+    return {
+        ...entry,
+        srsByMode: {
+            "1": defaultSRS(),
+            "2": defaultSRS(),
+            "3": defaultSRS(),
+            "4": defaultSRS()
+        }
+    };
+}
+
+function defaultSRS() {
+    return { repetitions: 0, interval: 1, ease: 2.5, due: Date.now() };
 }
