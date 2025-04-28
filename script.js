@@ -115,7 +115,7 @@ function loadDailyStats() {
 function saveDailyStats() { localStorage.setItem("dailyStats", JSON.stringify(dailyStats)); }
 
 // ------- SRS utilities ---------------------------------------------
-function defaultSRS() { return { repetitions:0, interval:1, ease:2.5, due:Date.now() }; }
+function defaultSRS() { return { repetitions:0, interval:0, ease:2.5, due:Date.now() }; }
 function createCard(base, savedSRS = {}) { MODES.forEach(m => savedSRS[m] ??= defaultSRS());  return { ...base, srsByMode:savedSRS }; }
 function scheduleCard(card, mode, grade) {
   const s = card.srsByMode[mode];
