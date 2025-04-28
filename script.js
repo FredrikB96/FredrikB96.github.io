@@ -1,532 +1,377 @@
-﻿let vocabList = [];
-let currentCard = null;
-let direction = 'jp-en';
-let quizMode = 'random';
-let showHints = false;
-let showExample = false;
-const maxNewByMode = { "1": 10, "2": 10, "3": 10, "4": 10 };
-const maxReviewByMode = { "1": 100, "2": 100, "3": 100, "4": 100 };
-let dailyStats;
-let isVocabLoaded = false;
+﻿/* =================================================================== *
+ *  1.  CONSTANTS & GLOBAL STATE                                       *
+ * =================================================================== */
+const MAX_NEW_CARDS = 30;
+const MAX_REVIEW_CARDS = 100;
+const MAX_NEW_BY_MODE    = { "1": MAX_NEW_CARDS,  "2": MAX_NEW_CARDS,  "3": MAX_NEW_CARDS,  "4": MAX_NEW_CARDS  };
+const MAX_REVIEW_BY_MODE = { "1": MAX_REVIEW_CARDS, "2": MAX_REVIEW_CARDS, "3": MAX_REVIEW_CARDS, "4": MAX_REVIEW_CARDS };
+const MODES              = ["1", "2", "3", "4"];
+const MODE_LABELS        = {
+  "1": "EN → Kanji",
+  "2": "Kanji → Reading",
+  "3": "Kanji → English",
+  "4": "Sentence → Translation",
+  "random": "Random"
+};
+const DAY_MS             = 86_400_000;
+const LAPSE_DELAY_MS = 120_000; 
 
+let vocabList        = [];               // deck currently in memory
+let currentCard      = null;             // card being shown
+let quizMode         = "random";         // "1" | "2" | "3" | "4" | "random"
+let direction        = "jp-en";          // only matters for mode-4
+let showHints        = false;
+let showExample      = false;
+let isVocabLoaded    = false;
+let dailyStats       = loadDailyStats(); // {date,newShownByMode,reviewShownByMode}
 
-// ========== UI SETUP ==========
-document.getElementById('quizMode').addEventListener('change', (e) => {
-    quizMode = e.target.value;
-    document.getElementById('directionWrapper').classList.toggle('hidden', quizMode !== '4');
-    showNextCard();
-});
-document.getElementById('direction').addEventListener('change', showNextCard);
-document.getElementById('showHints').addEventListener('change', (e) => {
-    showHints = e.target.checked;
-    document.getElementById('hints').classList.toggle('hidden', !showHints);
-});
-document.getElementById('showExample').addEventListener('change', (e) => {
-    showExample = e.target.checked;
-    document.getElementById('example').classList.toggle('hidden', !showExample);
-});
-document.getElementById('csvFile').addEventListener('change', handleFileUpload);
-document.getElementById('loadDefaultBtn')?.addEventListener('click', loadDefaultVocab);
-document.getElementById('nextBtn').addEventListener('click', () => {
-    document.getElementById('nextBtn').classList.add('hidden');
-    showNextCard();
-});
+let DEBUG = false;                // default = off
+function dbg(...args) { if (DEBUG) console.log(...args); }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const toggleBtn = document.getElementById('toggleStatsBtn');
-    const statsPanel = document.getElementById('perModeStats');
+/* =================================================================== *
+ *  2.  DOM-LOADERS (UI EVENT WIRING)                                   *
+ * =================================================================== */
+const $      = id  => document.getElementById(id);
+const toggle = (id, show) => $(id).classList.toggle("hidden", !show);
 
-    if (toggleBtn && statsPanel) {
-        toggleBtn.addEventListener('click', () => {
-            statsPanel.classList.toggle('hidden');
-            toggleBtn.innerText = statsPanel.classList.contains('hidden')
-                ? '📊 Show Stats'
-                : '📉 Hide Stats';
-        });
-    }
-    document.addEventListener('DOMContentLoaded', () => {
-        const lastDeck = localStorage.getItem('lastUsedDeck') || 'ALL';
-        const deckSelector = document.getElementById('deckSelector');
-        if (deckSelector) deckSelector.value = lastDeck;
-    });
+/* ---- on page ready ------------------------------------------------ */
+window.addEventListener("DOMContentLoaded", () => {
+  $("deckSelector").value   = localStorage.getItem("lastUsedDeck") || "ALL";
+  $("todayDate").innerText  = new Date().toLocaleDateString(undefined,
+                                {year:"numeric",month:"long",day:"numeric",weekday:"short"});
+  $("debugToggle").addEventListener("change", e => {
+    DEBUG = e.target.checked;
+    showToast(`Debug ${DEBUG ? "ON" : "OFF"}`);
+  });
+  attachEventHandlers();
+  updateModeStatsDisplay();
 });
 
-function updateTodayDate() {
-    const today = new Date();
-    const formatted = today.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'short'
-    });
+/* ---- UI controls -------------------------------------------------- */
+$("quizMode").addEventListener("change", e => {
+  quizMode = e.target.value;
+  toggle("directionWrapper", quizMode === "4");
+  showToast(`Mode set to ${MODE_LABELS[quizMode]}`);
+  showNextCard();
+});
+$("direction").addEventListener("change", e => { direction = e.target.value; showNextCard(); });
+$("showHints")   .addEventListener("change", e => { showHints   = e.target.checked; toggle("hints",   showHints);   });
+$("showExample") .addEventListener("change", e => { showExample = e.target.checked; toggle("example", showExample); });
+$("nextBtn")     .addEventListener("click",  () => { $("nextBtn").classList.add("hidden"); showNextCard(); });
 
-    document.getElementById('todayDate').innerText = formatted;
+$("csvFile")         .addEventListener("change", handleFileUpload);
+$("loadDefaultBtn")  .addEventListener("click",  loadDefaultVocab);
+$("downloadBackupBtn").addEventListener("click", downloadBackup);
+$("uploadBackupInput").addEventListener("change", uploadBackup);
+
+/* stats toggle */
+$("toggleStatsBtn").addEventListener("click", () => {
+  toggle("perModeStats", $("perModeStats").classList.contains("hidden"));
+  $("toggleStatsBtn").innerText =
+    $("perModeStats").classList.contains("hidden") ? "📊 Show Stats" : "📉 Hide Stats";
+});
+
+/* =================================================================== *
+ *  3.  HELPERS                                                        *
+ * =================================================================== */
+// ------- toast notification -----------------------------------------
+function showToast(msg) {
+  if (!document.getElementById("toast-style")) {
+    const style = document.createElement("style");
+    style.id = "toast-style";
+    style.textContent = `
+      .toast {
+        position: fixed;
+        bottom: 20px; left: 50%; transform: translateX(-50%);
+        background:#333;color:#fff;padding:10px 16px;border-radius:6px;
+        font-size:14px; opacity:0.92; transition: opacity .6s, transform .6s;
+        z-index: 9999;
+      }
+      .toast.fade { opacity:0; transform: translateX(-50%) translateY(20px); }
+    `;
+    document.head.appendChild(style);
+  }
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.classList.add("fade"), 2000);   // start fade
+  setTimeout(()=>t.remove(), 2600);                // remove from DOM
 }
 
-// ========== CORE FUNCTIONS ==========
-
-function startApp() {
-    dailyStats = loadDailyStats();
-    updateModeStatsDisplay();
-    showNextCard();
-    updateTodayDate();
-}
-
-window.addEventListener('DOMContentLoaded', startApp);
-
-function updateModeStatsDisplay() {
-    ["1", "2", "3", "4"].forEach(mode => {
-        const newDue = vocabList.filter(card => {
-            const srs = card.srsByMode?.[mode];
-            return srs && srs.repetitions === 0 && srs.due <= Date.now();
-        }).length;
-
-        const reviewDue = vocabList.filter(card => {
-            const srs = card.srsByMode?.[mode];
-            return srs && srs.repetitions > 0 && srs.due <= Date.now();
-        }).length;
-
-        const maxNew = Math.min(newDue, maxNewByMode[mode]);
-        const maxReview = Math.min(reviewDue, 100);
-
-        document.getElementById(`mode${mode}Count`).innerText = dailyStats.newShownByMode?.[mode] || 0;
-        document.getElementById(`mode${mode}Max`).innerText = maxNew;
-
-        document.getElementById(`mode${mode}ReviewCount`).innerText = dailyStats.reviewShownByMode?.[mode] || 0;
-        document.getElementById(`mode${mode}ReviewMax`).innerText = maxReview;
-    });
-}
-
-
+// ------- daily stats -----------------------------------------------
+function todayISO() { return new Date().toLocaleDateString("en-CA"); }
 function loadDailyStats() {
-    const today = new Date().toLocaleDateString('en-CA');
-    let stats = JSON.parse(localStorage.getItem('dailyStats') || '{}');
-
-    if (stats.date !== today) {
-        stats = {
-            date: today,
-            newShownByMode: {},
-            reviewShownByMode: {}
-        };
-    }
-
-    // Ensure all 4 mode keys exist
-    ["1", "2", "3", "4"].forEach(m => {
-        stats.newShownByMode ||= {};
-        stats.reviewShownByMode ||= {};
-
-        stats.newShownByMode[m] ||= 0;
-        stats.reviewShownByMode[m] ||= 0;
-    });
-
-    localStorage.setItem('dailyStats', JSON.stringify(stats));
-    return stats;
+  const saved = JSON.parse(localStorage.getItem("dailyStats") || "{}");
+  if (saved.date !== todayISO()) {
+    const blank = { date: todayISO(), newShownByMode:{}, reviewShownByMode:{} };
+    MODES.forEach(m => { blank.newShownByMode[m]=0; blank.reviewShownByMode[m]=0; });
+    localStorage.setItem("dailyStats", JSON.stringify(blank));
+    return blank;
+  }
+  MODES.forEach(m => { saved.newShownByMode[m] ??= 0; saved.reviewShownByMode[m] ??= 0; });
+  return saved;
 }
+function saveDailyStats() { localStorage.setItem("dailyStats", JSON.stringify(dailyStats)); }
 
-function saveDailyStats() {
-    localStorage.setItem('dailyStats', JSON.stringify(dailyStats));
-}
-
-function scheduleCard(card, grade, mode) {
-    const srs = card.srsByMode[mode];
-
-    if (grade < 3) {
-        srs.repetitions = 0;
-        srs.interval = 1;
-    } else {
-        srs.repetitions++;
-        if (srs.repetitions === 1) {
-            srs.interval = 1;
-        } else if (srs.repetitions === 2) {
-            srs.interval = 6;
-        } else {
-            srs.interval = Math.round(srs.interval * srs.ease);
-        }
-        srs.ease = Math.max(1.3, srs.ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
+// ------- SRS utilities ---------------------------------------------
+function defaultSRS() { return { repetitions:0, interval:1, ease:2.5, due:Date.now() }; }
+function createCard(base, savedSRS = {}) { MODES.forEach(m => savedSRS[m] ??= defaultSRS());  return { ...base, srsByMode:savedSRS }; }
+function scheduleCard(card, mode, grade) {
+    const s = card.srsByMode[mode];
+  
+    if (grade < 3) {                // ✘ wrong answer → “lapse”
+      /* promote brand-new card to a *review* so it no longer counts as “new” today */
+      if (s.repetitions === 0) s.repetitions = 1;
+  
+      s.interval   = 0;                         // interval not used for lapses
+      s.due        = Date.now() + LAPSE_DELAY_MS;
+    } else {                        // ✔ correct answer → normal SM-2 increments
+      s.repetitions++;
+      s.interval   = (s.repetitions === 1) ? 1
+                   : (s.repetitions === 2) ? 6
+                   : Math.round(s.interval * s.ease);
+      s.ease       = Math.max(1.3,
+                       s.ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
+      s.due        = Date.now() + s.interval * DAY_MS;
     }
-
-    srs.due = Date.now() + srs.interval * 86400000;
+  
     saveProgress();
-}
+  }
 
+// ------- storage ----------------------------------------------------
 function saveProgress() {
-    try {
-        const progress = vocabList.map(card => ({
-            word: card.word,
-            srsByMode: card.srsByMode
-        }));
-        localStorage.setItem('vocabProgress', JSON.stringify(progress));
-    } catch (e) {
-        console.warn("⚠️ Could not save progress:", e);
-    }
+  const compact = vocabList.map(({word,srsByMode}) => ({word,srsByMode}));
+  localStorage.setItem("vocabProgress", JSON.stringify(compact));
 }
+function loadProgress() { return JSON.parse(localStorage.getItem("vocabProgress") || "[]"); }
 
-function loadProgress() {
-    const data = JSON.parse(localStorage.getItem('vocabProgress') || '[]');
-
-    data.forEach(card => {
-        // Defensive patch for older entries
-        if (!card.srsByMode) {
-            const defaultSRS = () => ({ repetitions: 0, interval: 1, ease: 2.5, due: Date.now() });
-
-            card.srsByMode = {
-                "1": defaultSRS(),
-                "2": defaultSRS(),
-                "3": defaultSRS(),
-                "4": defaultSRS()
-            };
-        }
-    });
-
-    return data; // Array of { word, srsByMode }
-}
+// ------- misc utilities --------------------------------------------
+function shuffleArray(arr){ return arr.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]); }
 function extractReading(raw) {
-    return raw ? raw.replace(/([^\[]*)\[([^\]]+)\]/g, (_, __, reading) => reading) : '';
+    if (!raw) return "";
+  
+    return raw
+      //     ([^\s\p{Script=Hiragana}\p{Script=Katakana}\[\]]+)  → kanji chunk
+      //     \[([^\]]+)\]                                        → reading inside [...]
+      .replace(/([^\s\p{sc=Hiragana}\p{sc=Katakana}\[\]]+)\[([^\]]+)\]/gu, "$2")
+  
+      .replace(/\s+/g, "");
+  }
+function dueCardsForMode(mode){
+  return vocabList.filter(card=>{
+    const s=card.srsByMode[mode]; if(!s) return false;
+    const due = s.due<=Date.now(), isNew=s.repetitions===0;
+    if(isNew  && dailyStats.newShownByMode[mode]    < MAX_NEW_BY_MODE[mode]    && due) return true;
+    if(!isNew && dailyStats.reviewShownByMode[mode] < MAX_REVIEW_BY_MODE[mode] && due) return true;
+    return false;
+  });
+}
+function modesWithDue(){ return MODES.filter(m=>dueCardsForMode(m).length); }
+function getRandomMode(){ return MODES[Math.floor(Math.random()*MODES.length)]; }
+
+
+/* =================================================================== *
+ *  4.  CORE FUNCTIONS                                                 *
+ * =================================================================== */
+// ---------- quiz core -----------------
+function showNextCard(){
+  dbg("=== showNextCard() start ===");
+  if(!vocabList.length) return;
+  dbg("userChoice", quizMode, "mode pool before pick", modesWithDue());
+
+  /* pick a mode with cards */
+  const userChoice = quizMode;  
+  let mode = (userChoice === "random") ? getRandomMode() : userChoice;
+  let due  = dueCardsForMode(mode);
+  dbg(`[dueCardsForMode] mode=${mode}  due=${due.length}`);
+
+
+  if(!due.length){
+    const alt = modesWithDue().filter(m=>m!==mode);
+    if(!alt.length){ if(isVocabLoaded) alert("No cards due! Come back later."); return; }
+        mode = alt[Math.random()*alt.length|0];
+        due  = dueCardsForMode(mode);
+    
+       /* Only notify & change the drop-down if the user did NOT choose “Random”. */
+        if (userChoice !== "random") {
+         $("quizMode").value = mode;                      // reflect the new mode in the UI
+          toggle("directionWrapper", mode === "4");
+          showToast(`Auto-switched to ${MODE_LABELS[mode]}`);
+        } else {
+          /* keep the selector on “Random”; still adjust the JP/EN direction UI for mode-4 */
+          toggle("directionWrapper", mode === "4");
+        }
+  }
+
+  currentCard = due[Math.random()*due.length|0];
+  const [q, correct, hint] = getCardPrompt(currentCard, mode);
+  const opts = generateOptions(correct, currentCard.grammar, mode);
+
+  $("question").innerText  = q;
+  $("hints").textContent   = hint;
+  $("example").textContent = `JP: ${currentCard.exampleJP??""}\nEN: ${currentCard.exampleEN??""}`;
+  toggle("hints", showHints); toggle("example", showExample);
+  dbg("Picked mode", mode,
+    "| pool size", due.length,
+    "| card:", currentCard.word);
+  renderChoices(opts, correct, mode);
+  updateModeStatsDisplay();
 }
 
-function updateNewLeftCount() {
-    const el = document.getElementById('newLeftCount');
-    if (el) el.innerText = vocabList.filter(card => card.repetitions === 0).length;
-}
-
-function getCardPrompt(card, mode) {
-    const dir = document.getElementById('direction').value;
-    switch (mode) {
-        case "1": return [card.english, card.word, `Reading: ${card.reading}`];
-        case "2": return [card.word, card.reading, `English: ${card.english}`];
-        case "3": return [card.word, card.english, `Reading: ${card.reading}`];
-        case "4":
-            return dir === "jp-en"
+function getCardPrompt(card, mode){
+  const dir=$("direction").value;
+  switch(mode){
+    case "1": return [card.english, card.word,   `Reading: ${card.reading}`];
+    case "2": return [card.word,   card.reading, `English: ${card.english}`];
+    case "3": return [card.word,   card.english, `Reading: ${card.reading}`];
+    case "4": return dir==="jp-en"
                 ? [card.exampleJP, card.exampleEN, `Reading: ${card.reading}\nEnglish: ${card.english}`]
                 : [card.exampleEN, card.exampleJP, `Reading: ${card.reading}\nEnglish: ${card.english}`];
+  }
+}
+function generateOptions(correct, grammar, mode){
+  const dir=$("direction").value;
+  const pool=vocabList.filter(c=>c.grammar===grammar&&c!==currentCard);
+  const fallback=vocabList.filter(c=>c!==currentCard);
+  const src=(pool.length>=4?pool:fallback);
+
+  const set = new Set([correct]); let guard=0;
+  while(set.size<5 && guard<200){
+    const r=src[Math.random()*src.length|0]; if(!r){guard++;continue;}
+    let cand="";
+    switch(mode){
+      case "1": cand=r.word; break;
+      case "2": cand=r.word===r.reading?"":r.reading; break;
+      case "3": cand=r.english; break;
+      case "4": cand=dir==="jp-en"?r.exampleEN:r.exampleJP; break;
     }
+    if(cand) set.add(cand); guard++;
+    if(set.size===src.length) break;          // early-out for tiny decks
+  }
+  return shuffleArray([...set]);
 }
+function renderChoices(opts, correct, mode){
+  const box=$("choices"); box.innerHTML="";
+  opts.forEach(opt=>{
+    const b=document.createElement("button");
+    b.textContent=opt; b.classList.remove("selected");
+    b.onclick=()=>handleAnswer(b,opt===correct,mode);
+    box.appendChild(b);
+  });
+}
+function getCorrectAnswerText(mode){
+  const dir=$("direction").value;
+  switch(mode){
+    case "1": return currentCard.word;
+    case "2": return currentCard.reading;
+    case "3": return currentCard.english;
+    case "4": return dir==="jp-en"?currentCard.exampleEN:currentCard.exampleJP;
+  }
+}
+function handleAnswer(btn, isCorrect, mode){
+  dbg(`Answer ${isCorrect?"✔":"✘"}  word=${currentCard.word}  mode=${mode}`);
 
-function generateOptions(correct,grammar, mode) {
-    const direction = document.getElementById('direction').value;
-    let options = [correct], tries = 0;
+  /*  visual feedback  */
+  $("choices").querySelectorAll("button").forEach(b=>{
+    b.classList.remove("correct","wrong","selected");
+    if(b===btn) b.classList.add(isCorrect?"correct":"wrong","selected");
+    else if(b.textContent===getCorrectAnswerText(mode)) b.classList.add("correct");
+    else b.classList.add("wrong");
+    b.disabled=true;
+  });
 
-    const pool = vocabList.filter(card => card.grammar === grammar );
+  /*  determine status BEFORE scheduling  */
+  const srs     = currentCard.srsByMode[mode];
+  const wasNew  = (srs.repetitions===0);
+  const today   = todayISO();
 
-    while (options.length < 5 && tries < 100) {
-        const rand = pool[Math.floor(Math.random() * pool.length)];
-        console.log(`[DEBUG] candidate card grammar: ${rand.grammar}`);
+  /*  schedule next review  */
+  scheduleCard(currentCard, mode, isCorrect?5:2);
 
-            let candidate = '';
-            switch (mode) {
-                case "1": candidate = rand.word; break;
-                case "2": if (rand.word === rand.reading) continue; candidate = rand.reading; break;
-                case "3": candidate = rand.english; break;
-                case "4": candidate = direction === 'jp-en' ? rand.exampleEN : rand.exampleJP; break;
-            }
-
-            if (candidate && !options.includes(candidate)) options.push(candidate);
-            tries++;   
+  /*  update daily stats – count a new card once per day, regardless of correctness */
+  if (wasNew) {
+    if (srs._countedDate !== today) {
+      dailyStats.newShownByMode[mode]++; srs._countedDate = today;
     }
+  } else {
+    dailyStats.reviewShownByMode[mode]++;
+  }
+  saveDailyStats(); updateModeStatsDisplay();
 
-    return shuffleArray(options);
+  const nextDate=new Date(srs.due).toLocaleDateString("en-GB");
+  $("question").innerHTML += `<br><span class="nextDue">🔄 New Schedule: ${nextDate}</span>`;
+  $("nextBtn").classList.remove("hidden");
+  dbg("Stats → newShown", dailyStats.newShownByMode,
+    "| reviewShown", dailyStats.reviewShownByMode);
 }
 
-function renderChoices(options, correctAnswer, mode) {
-    const container = document.getElementById('choices');
-    container.innerHTML = '';
-    options.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.textContent = opt;
-        btn.addEventListener('click', () => handleAnswer(btn, opt === correctAnswer, mode));
-        container.appendChild(btn);
-    });
+// ---------- stats ----------
+function updateModeStatsDisplay(){
+  MODES.forEach(mode=>{
+    const newDue= vocabList.filter(c=>c.srsByMode[mode].repetitions===0 && c.srsByMode[mode].due<=Date.now()).length;
+    const revDue= vocabList.filter(c=>c.srsByMode[mode].repetitions>0  && c.srsByMode[mode].due<=Date.now()).length;
+    $("mode"+mode+"Count")      .innerText = dailyStats.newShownByMode[mode];
+    $("mode"+mode+"Max")        .innerText = Math.min(newDue , MAX_NEW_BY_MODE[mode]);
+    $("mode"+mode+"ReviewCount").innerText = dailyStats.reviewShownByMode[mode];
+    $("mode"+mode+"ReviewMax")  .innerText = Math.min(revDue , MAX_REVIEW_BY_MODE[mode]);
+  });
 }
 
-function showNextCard() {
-    const mode = quizMode === 'random' ? getRandomMode() : quizMode;
-    dailyStats = loadDailyStats();
-    //const maxNew = maxNewByMode[mode];
-    //const newShown = dailyStats.newShownByMode[mode] || 0;
+// ---------- deck loaders -------------
+function handleFileUpload(e){
+  const f=e.target.files[0]; if(!f) return; isVocabLoaded=true;
+  Papa.parse(f,{delimiter:"\t",skipEmptyLines:true,complete:({data})=>ingestRows(data)});
+}
+function loadDefaultVocab(){
+  const deck=$("deckSelector").value; localStorage.setItem("lastUsedDeck",deck);
+  fetch(`default-decks/${deck}.txt`)
+    .then(r=>r.text()).then(txt=>Papa.parse(txt,{delimiter:"\t",skipEmptyLines:true,complete:({data})=>ingestRows(data)}))
+    .catch(()=>alert(`Could not load ${deck} deck file.`));
+}
+function ingestRows(rows){
+  const savedMap=new Map(loadProgress().map(o=>[o.word,o.srsByMode]));
+  vocabList = rows.map(r=>{
+    if(r.length<4) return null;
+    const [word,en,readRaw,grammar,,jp,,enSent]=r;
+    if(!word||!en||!readRaw) return null;
+    return createCard(
+      { word, english:en, reading:extractReading(readRaw), grammar, exampleJP:jp, exampleEN:enSent },
+      savedMap.get(word)
+    );
+  }).filter(Boolean);
 
-    const dueWords = vocabList.filter(card => {
-        const srs = card.srsByMode[mode];
-        if (!srs) return false;
+  $("quizSection").classList.remove("hidden");
+  dailyStats = loadDailyStats(); updateModeStatsDisplay(); showNextCard();
 
-        const isNew = card.srsByMode[mode]?.repetitions === 0;
-        const isDue = srs.due <= Date.now();
-
-        // Skip katakana-style (non-kanji) words in mode 2
-        if (mode === "2" && card.word === card.reading) return false;
-
-        // Respect new/review limits
-        if (isNew && dailyStats.newShownByMode[mode] < maxNewByMode[mode] && isDue) return true;
-        if (!isNew && dailyStats.reviewShownByMode[mode] < maxReviewByMode[mode] && isDue) return true;
-
-        return false;
-    });
-
-    if (!dueWords.length) {
-	  if (isVocabLoaded) {
-          alert("No cards due! Come back later.");
-	  }
-	   return;
-	}
-
-    currentCard = dueWords[Math.floor(Math.random() * dueWords.length)];
-    const isNew = currentCard.srsByMode[mode]?.repetitions === 0;
-    console.log(`[DEBUG] Selected card: ${currentCard.word}`);
-    console.log(`[DEBUG] Selected card grammar: ${currentCard.grammar}`);
-
-    console.log(`[DEBUG] Status: ${isNew ? 'NEW' : 'REVIEW'}`);
-
-
-    const [question, correctAnswer, hint] = getCardPrompt(currentCard, mode);
-    const options = generateOptions(correctAnswer,currentCard.grammar, mode);
-
-    document.getElementById('question').innerText = question;
-    document.getElementById('hints').textContent = hint;
-    document.getElementById('example').textContent = `JP: ${currentCard.exampleJP}\nEN: ${currentCard.exampleEN}`;
-    renderChoices(options, correctAnswer, mode);
-
-    updateNewLeftCount();
-    updateModeStatsDisplay();
-
+  if (DEBUG) {
+    const newDue = vocabList.filter(c =>
+        MODES.some(m => c.srsByMode[m].repetitions === 0 &&
+                        c.srsByMode[m].due <= Date.now())).length;
+    const revDue = vocabList.filter(c =>
+        MODES.some(m => c.srsByMode[m].repetitions  > 0 &&
+                        c.srsByMode[m].due <= Date.now())).length;
+  
+    dbg(`[Deck] Loaded “${$("deckSelector").value}”  cards:${vocabList.length}  due ⇒ new:${newDue}  review:${revDue}`);
+  }
 }
 
-function getCorrectAnswerText(mode) {
-    const dir = document.getElementById('direction').value;
-    switch (mode) {
-        case "1": return currentCard.word;
-        case "2": return currentCard.reading;
-        case "3": return currentCard.english;
-        case "4":
-            return dir === 'jp-en' ? currentCard.exampleEN : currentCard.exampleJP;
-        default: return '';
-    }
+// ---------- backup / restore ----------
+function downloadBackup(){
+  const blob=new Blob([localStorage.getItem("vocabProgress")||"[]"],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="vocabProgress.json"; a.click();
+}
+function uploadBackup(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ localStorage.setItem("vocabProgress",r.result); vocabList=[]; showNextCard(); };
+  r.readAsText(f);
 }
 
-function handleAnswer(clickedBtn, isCorrect, mode) {
-    const isNew = currentCard.srsByMode[mode]?.repetitions === 0;
-    const correctAnswer = clickedBtn.textContent;
-
-    const buttons = document.querySelectorAll('#choices button');
-    buttons.forEach(btn => {
-        if (btn.textContent === correctAnswer) {
-            btn.classList.add(isCorrect ? 'correct' : 'wrong');
-        } else if (btn.textContent === getCorrectAnswerText(mode)) {
-            btn.classList.add('correct');
-        } else {
-            btn.classList.add('wrong');
-        }
-
-        btn.style.pointerEvents = 'none';
-    });
-
-    clickedBtn.classList.add('selected'); // 👇 adds visual border to the one clicked
-
-    scheduleCard(currentCard, isCorrect ? 5 : 2, mode);
-
-    console.log(`[DEBUG] [HandleAnswer] Status: ${isNew ? 'NEW' : 'REVIEW'}`);
-
-    if (isNew) dailyStats.newShownByMode[mode]++;
-    else dailyStats.reviewShownByMode[mode]++;
-
-    saveDailyStats();
-    updateModeStatsDisplay();
-
-    const nextDue = currentCard.srsByMode?.[mode]?.due;
-    const dueDate = new Date(nextDue);
-    const formatted = dueDate.toLocaleDateString('en-GB');
-
-    // Calculate "in X days"
-    const now = new Date();
-    const diffTime = dueDate - now;
-    const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-
-    document.getElementById('question').innerHTML += `<br><span class="nextDue">🔄 New Schedule: ${formatted} (${diffDays} day${diffDays !== 1 ? 's' : ''})</span>`;
-    document.getElementById('nextBtn').classList.remove('hidden');
-}
-
-function shuffleArray(arr) {
-    return arr.map(a => [Math.random(), a]).sort((a, b) => a[0] - b[0]).map(a => a[1]);
-}
-
-function getRandomMode() {
-    return ['1', '2', '3'][Math.floor(Math.random() * 3)];
-}
-
-function handleFileUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    isVocabLoaded = true;
-
-    Papa.parse(file, {
-        delimiter: '\t',
-        skipEmptyLines: true,
-        complete: function ({ data }) {
-            const saved = loadProgress();
-            const map = new Map(saved.map(w => [w.word, w]));
-
-            vocabList = data.map(row => {
-                if (row.length < 4) return null;
-                const [word, english, readingRaw, grammar, wordType, jp, , en] = row;
-                if (!word || !english || !readingRaw) return null;
-
-                const reading = extractReading(readingRaw);
-                const entry = {
-                    word,
-                    english,
-                    reading,
-                    grammar,
-                    wordType,
-                    exampleJP: jp,
-                    exampleEN: en
-                };
-
-                // Merge SRS progress if it exists
-                const existing = map.get(word);
-                if (existing?.srsByMode) {
-                    entry.srsByMode = existing.srsByMode;
-                }
-
-                return createCard(entry);
-            }).filter(Boolean);
-
-            console.log(`Deck loaded with ${vocabList.length} entries. Matched progress for ${map.size} entries.`);
-
-            resetStats();
-            document.getElementById('quizSection').classList.remove('hidden');
-            attachEventHandlers();
-            showNextCard();
-        }
-    });
-}
-
-
-function loadDefaultVocab() {
-    const selector = document.getElementById('deckSelector');
-    const selectedDeck = selector?.value || 'ALL';
-    isVocabLoaded = true;
-    localStorage.setItem('lastUsedDeck', selectedDeck);
-
-    const filePath = `default-decks/${selectedDeck}.txt`;
-    console.log(`Loaded deck: ${selectedDeck}`);
-
-    fetch(filePath)
-        .then(res => res.text())
-        .then(text => {
-            Papa.parse(text, {
-                delimiter: '\t',
-                skipEmptyLines: true,
-                complete: function ({ data }) {
-                    const saved = loadProgress();
-                    const map = new Map(saved.map(w => [w.word, w]));
-
-                    vocabList = data.map(row => {
-                        if (row.length < 4) return null;
-                        const [word, english, readingRaw, grammar, wordType, jp, , en] = row;
-                        if (!word || !english || !readingRaw) return null;
-
-                        const reading = extractReading(readingRaw);
-                        const entry = {
-                            word,
-                            english,
-                            reading,
-                            grammar,
-                            wordType,
-                            exampleJP: jp,
-                            exampleEN: en
-                        };
-
-                        // Merge SRS progress if it exists
-                        const existing = map.get(word);
-                        if (existing?.srsByMode) {
-                            entry.srsByMode = existing.srsByMode;
-                        }
-
-                        return createCard(entry);
-                    }).filter(Boolean);
-
-                    resetStats();
-                    document.getElementById('quizSection').classList.remove('hidden');
-                    attachEventHandlers();
-                    showNextCard();
-                }
-            });
-        })
-        .catch(err => {
-            console.error(`Error loading ${selectedDeck} deck:`, err);
-            alert(`Could not load ${selectedDeck} deck file.`);
-        });
-}
-
-
-// Helpers
-
-function mergeDeckWithProgress(data) {
-    const saved = loadProgress();
-    const map = new Map(saved.map(w => [w.word, w]));
-
-    return data.map(row => {
-        if (row.length < 4) return null;
-        const [word, english, readingRaw, grammar, wordType, jp, , en] = row;
-        if (!word || !english || !readingRaw) return null;
-
-        const reading = extractReading(readingRaw);
-        const entry = {
-            word,
-            english,
-            reading,
-            grammar,
-            wordType,
-            exampleJP: jp,
-            exampleEN: en
-        };
-
-        const existing = map.get(word);
-        if (existing?.srsByMode) {
-            entry.srsByMode = existing.srsByMode;
-        }
-
-        return createCard(entry);  // ensures srsByMode fallback if missing
-    }).filter(Boolean);
-}
-
-function resetStats() {
-    dailyStats = loadDailyStats(); // get today's stats (with mode keys reset)
-    currentCard = null;
-    currentNewCount = 0;
-    currentReviewCount = 0;
-    updateModeStatsDisplay();      // refresh UI
-}
-
-function attachEventHandlers() {
-    const directionEl = document.getElementById('direction');
-    if (directionEl && !directionEl.dataset.bound) {
-        directionEl.addEventListener('change', (e) => {
-            direction = e.target.value;
-            showNextCard();
-        });
-        directionEl.dataset.bound = true;
-    }
-}
-
-function createCard(entry) {
-    const defaultSRS = () => ({
-        repetitions: 0,
-        interval: 1,
-        ease: 2.5,
-        due: Date.now()
-    });
-
-    return {
-        ...entry,
-        srsByMode: {
-            "1": defaultSRS(),
-            "2": defaultSRS(),
-            "3": defaultSRS(),
-            "4": defaultSRS()
-        }
-    };
-}
-
-function defaultSRS() {
-    return { repetitions: 0, interval: 1, ease: 2.5, due: Date.now() };
+// ---------- misc ----------
+function attachEventHandlers(){
+  const dirEl=$("direction");
+  if(dirEl&&!dirEl.dataset.bound){
+    dirEl.addEventListener("change", e=>{ direction=e.target.value; showNextCard(); });
+    dirEl.dataset.bound="true";
+  }
 }
