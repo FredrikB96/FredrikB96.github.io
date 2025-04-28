@@ -118,27 +118,32 @@ function saveDailyStats() { localStorage.setItem("dailyStats", JSON.stringify(da
 function defaultSRS() { return { repetitions:0, interval:1, ease:2.5, due:Date.now() }; }
 function createCard(base, savedSRS = {}) { MODES.forEach(m => savedSRS[m] ??= defaultSRS());  return { ...base, srsByMode:savedSRS }; }
 function scheduleCard(card, mode, grade) {
-    const s = card.srsByMode[mode];
-  
-    if (grade < 3) {                // ✘ wrong answer → “lapse”
-      /* promote brand-new card to a *review* so it no longer counts as “new” today */
-      if (s.repetitions === 0) s.repetitions = 1;
-  
-      s.interval   = 0;                         // interval not used for lapses
-      s.due        = Date.now() + LAPSE_DELAY_MS;
-    } else {                        // ✔ correct answer → normal SM-2 increments
-      s.repetitions++;
-      s.interval   = (s.repetitions === 1) ? 1
-                   : (s.repetitions === 2) ? 6
-                   : Math.round(s.interval * s.ease);
-      s.ease       = Math.max(1.3,
-                       s.ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
-      s.due        = Date.now() + s.interval * DAY_MS;
+  const s = card.srsByMode[mode];
+
+  if (grade < 3) {                // ✘ wrong answer → “lapse”
+    if (s.repetitions === 0) {
+      // Card was new, so promote to "review" by setting repetitions=1
+      s.repetitions = 1;
     }
-  
-    saveProgress();
+    s.interval = 0;
+    s.due      = Date.now() + LAPSE_DELAY_MS;
+  } else {                        // ✔ correct answer → normal SM-2 increments
+    if (s.interval === 0) {
+      // If this was a lapsed card, treat as first review (interval=1 day)
+      s.interval = 1;
+    } else {
+      s.interval = (s.repetitions === 1) ? 1
+                 : (s.repetitions === 2) ? 6
+                 : Math.round(s.interval * s.ease);
+    }
+    s.repetitions++;
+    s.ease = Math.max(1.3,
+      s.ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
+    s.due  = Date.now() + s.interval * DAY_MS;
   }
 
+  saveProgress();
+}
 // ------- storage ----------------------------------------------------
 function saveProgress() {
   const compact = vocabList.map(({word,srsByMode}) => ({word,srsByMode}));
@@ -304,6 +309,9 @@ function handleAnswer(btn, isCorrect, mode){
   $("nextBtn").classList.remove("hidden");
   dbg("Stats → newShown", dailyStats.newShownByMode,
     "| reviewShown", dailyStats.reviewShownByMode);
+
+  if(!isCorrect)
+    showToast("Wrong answer, new try in 2 minutes");
 }
 
 // ---------- stats ----------
@@ -345,14 +353,24 @@ function ingestRows(rows){
   dailyStats = loadDailyStats(); updateModeStatsDisplay(); showNextCard();
 
   if (DEBUG) {
-    const newDue = vocabList.filter(c =>
-        MODES.some(m => c.srsByMode[m].repetitions === 0 &&
-                        c.srsByMode[m].due <= Date.now())).length;
-    const revDue = vocabList.filter(c =>
-        MODES.some(m => c.srsByMode[m].repetitions  > 0 &&
-                        c.srsByMode[m].due <= Date.now())).length;
+    let newCards = 0, reviewCards = 0;
   
-    dbg(`[Deck] Loaded “${$("deckSelector").value}”  cards:${vocabList.length}  due ⇒ new:${newDue}  review:${revDue}`);
+    vocabList.forEach(card => {
+      const isNew = MODES.some(m => card.srsByMode[m]?.repetitions === 0);
+      if (isNew) newCards++;
+      else reviewCards++;
+    });
+  
+    const newDue = vocabList.filter(c =>
+      MODES.some(m => c.srsByMode[m].repetitions === 0 && c.srsByMode[m].due <= Date.now())
+    ).length;
+  
+    const revDue = vocabList.filter(c =>
+      MODES.some(m => c.srsByMode[m].repetitions > 0 && c.srsByMode[m].due <= Date.now())
+    ).length;
+  
+    dbg(`[Deck Loaded] ${vocabList.length} total → ${newCards} new / ${reviewCards} review cards`);
+    dbg(`[Due Now] ${newDue} new due / ${revDue} review due`);
   }
 }
 
