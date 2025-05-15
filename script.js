@@ -259,14 +259,15 @@ function getReviewCard() {
 
 function getRetryCard() {
     if (newCardsQuizzed > REVIEW_CARD_LIMIT) {
-        dbg("[getNewCard] limit reacged!");
+        dbg("[getNewCard] limit reached!");
         return null;
     }
-    if (reviewWordList.length < 1) {
-        dbg("[getNewCard] New card list empty!");
+    if (retryList.length < 1) {
+        dbg("[getNewCard] Retry card list empty!");
+        return null;
     }
 
-    let card = reviewWordList[Math.floor(Math.random() * reviewWordList.length)];
+    let card = retryList[Math.floor(Math.random() * retryList.length)];
     dbg(`[getNewCard] Card selected: ${card.word} `);
     return card;
 }
