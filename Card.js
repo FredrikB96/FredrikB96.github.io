@@ -1,6 +1,6 @@
-// JavaScript source code
+﻿// JavaScript source code
 class Card {
-    constructor(_word, _definition, _reading, _grammar, _sentence, _sentenceDefinition, _dueDate) {
+    constructor(_word, _definition, _reading, _grammar, _sentence, _sentenceDefinition, _dueDate, _fsrsState) {
         this.word = _word;
         this.definition = _definition;
         this.reading = Card.extractReading(_reading);
@@ -8,9 +8,17 @@ class Card {
         this.sentence = _sentence;
         this.sentenceDefinition = _sentenceDefinition;
         this.dueDate = _dueDate;
+        this.fsrsState = _fsrsState || null;
     }
 
     static extractReading(raw) {
-        return raw?.replace(/([^\[]*)\[([^\]]+)\]/g, (_, __, reading) => reading) || "";
+        if (!raw) return "";
+
+        // Match all kana characters (from anywhere in the string)
+        const matches = raw.match(/[ぁ-んァ-ヶー]/g);
+
+        // Join them into a string, or return empty if none
+        return matches ? matches.join("") : "";
     }
+
 }

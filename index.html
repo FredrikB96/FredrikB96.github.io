@@ -1,110 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Japanese Vocab SRS Quiz</title>
-    <link rel="stylesheet" href="style.css" />
+    <meta name="description" content="Japanese SRS Quiz Trainer" />
+    <meta name="keywords" content="SRS, Japanese, Quiz, Trainer" />
+    <meta name="author" content="" />
+
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="stylesheet" href="style.css" />
+
+    <title>SRS Trainer</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://unpkg.com/ts-fsrs@4.7.1/dist/index.umd.js"></script>
+    <script src="Flashcard.js"></script>
+    <script src="globals.js"></script>
+    <script src="helpers.js"></script>
+    <script src="scheduler.js"></script>
+    <script src="main.js"></script>
 </head>
 <body>
-
     <div class="container">
-        <h1>Japanese SRS Quiz Trainer</h1>
+        <header>
+            <nav class="quick-actions">
+                <button id="toggleStatsBtn">📊 Show Stats</button>
+                <button id="toggleSettingsBtn" onclick="openModal('settingsModal')">⚙️ Settings</button>
+                <button id="themeToggle">🌓 Toggle Theme</button>
+            </nav>
+            <h1>Japanese SRS Quiz Trainer</h1>
 
-        <div class="controls">
-            <label>
-                Load Custom Deck:
-                <input type="file" id="csvFile" accept=".csv,.txt" />
-            </label>
+            <section class="controls-group" aria-label="Deck Controls">
+                <div class="controls">
+                    <button onclick="openModal('customDeckModal')">📁 Load Custom Deck</button>
+                    <button onclick="openModal('defaultDeckModal')">📂 Load Default Deck</button>
+                </div>
+            </section>
 
-            <label>
-                Default Deck:
-                <select id="deckSelector">
-                    <option value="ALL">All</option>
-                    <option value="N5">N5</option>
-                    <option value="N4">N4</option>
-                    <option value="N3">N3</option>
-                    <option value="N2">N2</option>
-                    <option value="N1">N1</option>
-                </select>
-            </label>
+            <section class="controls-group" aria-label="Options">
+                <div class="controls">
+                    <label>
+                        Quiz Mode:
+                        <select id="quizMode">
+                            <option value="random">🎲 Random</option>
+                            <option value="1">EN → Kanji</option>
+                            <option value="2">Kanji → Reading</option>
+                            <option value="3">Kanji → English</option>
+                            <option value="4">Sentence → Translation</option>
+                        </select>
+                    </label>
 
-            <button id="loadDefaultBtn">📂 Load Deck</button>
-        </div>
+                    <label id="directionLabel" class="hidden">
+                        Direction:
+                        <select id="direction">
+                            <option value="jp-en">JP → EN</option>
+                            <option value="en-jp">EN → JP</option>
+                        </select>
+                    </label>
+                    <div class="controls">
+                        <label><input type="checkbox" id="showHints"> Show Hints</label>
+                        <label><input type="checkbox" id="showExample"> Show Example</label>
+                    </div>
+                </div>
+            </section>
+        </header>
 
-        <div class="controls">
-            <label>
-                Quiz Mode:
-                <select id="quizMode">
-                    <option value="random">🎲 Random</option>
-                    <option value="1">EN → Kanji</option>
-                    <option value="2">Kanji → Reading</option>
-                    <option value="3">Kanji → English</option>
-                    <option value="4">Sentence → Translation</option>
-                </select>
-            </label>
+        <main>
+            <aside id="statsPanel" class="hidden stats-box" aria-live="polite">
+                <h3>📈 Session Statistics</h3>
+                <ul>
+                    <li>EN → Kanji: <span id="mode1Count">0</span>/<span id="mode1Max">10</span> (R: <span id="mode1ReviewCount">0</span>/<span id="mode1ReviewMax">100</span>)</li>
+                    <li>Kanji → Reading: <span id="mode2Count">0</span>/<span id="mode2Max">10</span> (R: <span id="mode2ReviewCount">0</span>/<span id="mode2ReviewMax">100</span>)</li>
+                    <li>Kanji → English: <span id="mode3Count">0</span>/<span id="mode3Max">10</span> (R: <span id="mode3ReviewCount">0</span>/<span id="mode3ReviewMax">100</span>)</li>
+                    <li>Sentence → Translation: <span id="mode4Count">0</span>/<span id="mode4Max">10</span> (R: <span id="mode4ReviewCount">0</span>/<span id="mode4ReviewMax">100</span>)</li>
+                </ul>
+                <p>📝 Done Cards: <span id="doneCount">0</span></p>
+                <p>⏳ Cards Due: <span id="dueCount">0</span></p>
+                <p>Total New Remaining: <span id="newLeftCount">...</span></p>
+            </aside>
 
-            <label>
-                Direction:
-                <select id="direction">
-                    <option value="jp-en">JP → EN</option>
-                    <option value="en-jp">EN → JP</option>
-                </select>
-            </label>
-        </div>
-
-        <div class="controls">
-            <label><input type="checkbox" id="showHints"> Show Hints</label>
-            <label><input type="checkbox" id="showExample"> Show Example</label>
-        </div>
-        <button id="toggleStatsBtn">📊 Show Stats</button>
-        <button id="toggleSettingsBtn">⚙️ Settings</button>
-        <div id="statsPanel" class="hidden stats-box">
-            <h3>📈 Session Statistics</h3>
-            <ul>
-                <li>EN → Kanji: <span id="mode1Count">0</span>/<span id="mode1Max">10</span> (R: <span id="mode1ReviewCount">0</span>/<span id="mode1ReviewMax">100</span>)</li>
-                <li>Kanji → Reading: <span id="mode2Count">0</span>/<span id="mode2Max">10</span> (R: <span id="mode2ReviewCount">0</span>/<span id="mode2ReviewMax">100</span>)</li>
-                <li>Kanji → English: <span id="mode3Count">0</span>/<span id="mode3Max">10</span> (R: <span id="mode3ReviewCount">0</span>/<span id="mode3ReviewMax">100</span>)</li>
-                <li>Sentence → Translation: <span id="mode4Count">0</span>/<span id="mode4Max">10</span> (R: <span id="mode4ReviewCount">0</span>/<span id="mode4ReviewMax">100</span>)</li>
-            </ul>
-            <p>📝 Done Cards: <span id="doneCount">0</span></p>
-            <p>⏳ Cards Due: <span id="dueCount">0</span></p>
-            <p>Total New Remaining: <span id="newLeftCount">...</span></p>
-        </div>
-
-        <div id="settingsPanel" class="hidden">
-            <div>
-                <label><input type="checkbox" id="debugToggle" checked="checked"> Debug</label>
-            </div>
-            <div id="debugDate" class="hidden">
-                <label><input type="date" />Debug Date:</label>
-                <label><input id="useDegugDate" type="checkbox">Use date</label>
-            </div>
-            <label>Max New Cards/Mode: <input type="number" id="maxNewInput" min="0" value="10" /></label>
-            <label>Max Review Cards/Mode: <input type="number" id="maxReviewInput" min="0" value="100" /></label>
-            <button id="applyLimitsBtn">Apply</button>
-        </div>
-
-        <div id="quizSection" class="hidden">
-            <p id="todayDisplay">📅 Today's Date: <span id="todayDate"></span></p>
-            <div id="question" class="question-box"></div>
-            <div id="choices" class="choices-container"></div>
-            <div id="hints" class="hidden hint-box"></div>
-            <div id="example" class="hidden example-box"></div>
-            <button id="nextBtn" class="hidden">Next</button>
-        </div>
-
-
+            <section id="quizSection" class="hidden" aria-label="Quiz Section">
+                <p id="todayDisplay">📅 Today's Date: <span id="todayDate"></span></p>
+                <div id="question" class="question-box"></div>
+                <div id="choices" class="choices-container"></div>
+                <div id="hints" class="hidden hint-box"></div>
+                <div id="example" class="hidden example-box"></div>
+                <button id="nextBtn" class="hidden">Next</button>
+            </section>
+        </main>
     </div>
 
-    <div id="fieldMapperModal" class="modal hidden">
+    <!-- Modals -->
+    <div id="fieldMapperModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="fieldMapperTitle">
         <div class="modal-content">
-            <h3>🧩 Map Your Fields</h3>
+            <h3 id="fieldMapperTitle">🧩 Map Your Fields</h3>
             <p>Select which column corresponds to each field.</p>
             <table id="sampleDataTable"></table>
             <div id="mappingControls"></div>
@@ -112,11 +102,73 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="https://unpkg.com/ts-fsrs@4.7.1/dist/index.umd.js"></script>
-    <script src="Card.js"></script>
-    <script src="srs.js"></script>
-    <script src="utils.js"></script>
-    <script src="script.js"></script>
+    <div id="customDeckModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <h3>📁 Upload Custom Deck</h3>
+            <input type="file" id="csvFile" accept=".csv,.txt" />
+            <button onclick="closeModal('customDeckModal')">Cancel</button>
+        </div>
+    </div>
+
+    <div id="defaultDeckModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <h3>📂 Select Default Deck</h3>
+            <select id="deckSelector">
+                <option value="ALL">All</option>
+                <option value="N5">N5</option>
+                <option value="N4">N4</option>
+                <option value="N3">N3</option>
+                <option value="N2">N2</option>
+                <option value="N1">N1</option>
+            </select>
+            <button id="loadDefaultBtn">✔ Load Deck</button>
+            <button onclick="closeModal('defaultDeckModal')">Cancel</button>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content" role="region" aria-label="Settings">
+            <h3>⚙️ Settings</h3>
+
+            <!-- Debug Settings Section -->
+            <section class="settings-section">
+                <h4>🔍 Debug Settings</h4>
+                <label>
+                    <input type="checkbox" id="debugToggle" checked />
+                    Enable Debug Mode
+                </label>
+                <div id="debugOptions" class="hidden">
+                    <label>
+                        Debug Date:
+                        <input type="date" id="debugDateInput" />
+                    </label>
+                    <label>
+                        <input type="checkbox" id="useDebugDate" />
+                        Use Debug Date
+                    </label>
+                </div>
+            </section>
+
+            <!-- Card Limit Settings Section -->
+            <section class="settings-section">
+                <h4>🧮 Card Limits</h4>
+                <label>
+                    Max New Cards per Mode:
+                    <input type="number" id="maxNewInput" min="0" value="10" />
+                </label>
+                <label>
+                    Max Review Cards per Mode:
+                    <input type="number" id="maxReviewInput" min="0" value="100" />
+                </label>
+            </section>
+
+            <!-- Action Buttons -->
+            <div class="modal-actions">
+                <button id="applyLimitsBtn">✅ Apply</button>
+                <button onclick="closeModal('settingsModal')">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

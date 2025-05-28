@@ -1,250 +1,121 @@
+:root {
+    --clr-background: #ffffff;
+    --clr-foreground: #000000;
+    --clr-primary: #94131a;
+    --clr-surface: #f2f2f2;
+    --clr-accent: #d89b91;
+}
+
+    :root.dark {
+        --clr-background: #121212;
+        --clr-foreground: #ffffff;
+        --clr-primary: #d89b91;
+        --clr-surface: #282828;
+        --clr-accent: #94131a;
+    }
+
+/* Apply to body and other elements */
 body {
-    font-family: "Segoe UI", sans-serif;
-    background-color: #f8f9fa;
-    color: #333;
+    background-color: var(--clr-background);
+    color: var(--clr-foreground);
+    font-family: 'Noto Sans JP', sans-serif;
     margin: 0;
-    padding: 20px;
 }
 
-.container {
-    max-width: 780px;
-    margin: auto;
-    background: #fff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+header, .controls-group, .stats-box, #settingsPanel, .question-box, .choices-container, .hint-box, .example-box {
+    background-color: var(--clr-surface);
+    color: var(--clr-foreground);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
 }
-
-h1 {
-    text-align: center;
-    margin-bottom: 25px;
-    color: #222;
-}
-
-.controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 20px;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    background-color: #f1f3f5;
-    padding: 12px 16px;
-    border-radius: 10px;
-}
-
-    .controls label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex: 1 1 45%;
-    }
-
-    .controls select,
-    .controls input[type="file"],
-    .controls input[type="checkbox"],
-    .controls input[type="number"] {
-        padding: 5px;
-        font-size: 14px;
-    }
 
 button {
-    background-color: #3b82f6;
-    color: white;
-    padding: 10px 16px;
+    background-color: var(--clr-primary);
+    color: var(--clr-foreground);
     border: none;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 5px;
     cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s ease-in-out;
+    transition: background-color 0.3s;
 }
 
     button:hover {
-        background-color: #2563eb;
+        background-color: var(--clr-accent);
     }
 
-    button.hidden {
-        display: none;
-    }
-
-#question {
-    font-size: 20px;
-    font-weight: bold;
-    background: #fff3cd;
-    padding: 18px;
-    border-radius: 10px;
-    border: 1px solid #ffeeba;
-    text-align: center;
-    margin-bottom: 16px;
-    white-space: pre-wrap;
-}
-
-.choices-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-    .choices-container button {
-        padding: 12px 16px;
-        font-size: 28px;
-        border: 2px solid transparent;
-        border-radius: 8px;
-        background-color: #f0f4f8;
-        color: #222;
-        cursor: pointer;
-        transition: background-color 0.2s, border 0.2s;
-    }
-
-        .choices-container button:hover {
-            background-color: #cbd5e1;
-        }
-
-        .choices-container button.correct {
-            background-color: #a7f3d0;
-            border-color: #10b981;
-            color: #065f46;
-        }
-
-        .choices-container button.wrong {
-            background-color: #fecaca;
-            border-color: #ef4444;
-            color: #991b1b;
-        }
-
-        .choices-container button.selected {
-            border: 2px solid #3b82f6;
-            box-shadow: 0 0 4px #60a5fa;
-        }
-
-.hint-box,
-.example-box {
-    background: #f1f1f1;
-    border-left: 4px solid #ccc;
-    margin-top: 12px;
-    padding: 10px 14px;
-    border-radius: 6px;
-    font-style: italic;
-    color: #333;
-    white-space: pre-wrap;
-}
-
-#statsPanel,
-#settingsPanel {
-    margin-top: 20px;
-    padding: 20px;
-    background: #f9fafb;
-    border-radius: 10px;
-    border: 1px solid #ddd;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.03);
-}
-
-    #statsPanel ul {
-        padding-left: 18px;
-    }
-
-    #statsPanel li {
-        margin-bottom: 8px;
-    }
-
-.hidden {
-    display: none !important;
-}
-
-.settings-box label {
+/* Base option button styling */
+.option-button {
     display: block;
-    margin: 10px 0;
-}
-
-input[type="number"] {
-    width: 60px;
-    margin-left: 10px;
-}
-
-#todayDate {
-    font-weight: bold;
-    color: #0f172a;
-}
-
- /* Visual field mapper */
-
-.modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-    max-width: 90%;
-    max-height: 80%;
-    overflow-y: auto;
-    overflow-x: auto;
-    padding: 20px;
-}
-.modal::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.4);
-        z-index: -1;
-    }
-
-
-.modal-content {
-    max-width: 100%;
-}
-
-#sampleDataTable {
-    border-collapse: separate;
-    border-spacing: 0;
     width: 100%;
-    background-color: #ffffff;
-    font-family: "Segoe UI", sans-serif;
-    font-size: 14px;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
-    margin-top: 16px;
+    max-width: 400px;
+    margin: 10px auto;
+    background-color: var(--clr-primary);
+    color: var(--clr-foreground);
+    border: 2px solid var(--clr-accent);
+    font-weight: bold;
+    font-size: 1rem;
+    padding: 12px 16px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s, background-color 0.3s, border-color 0.3s;
 }
 
-    #sampleDataTable th,
-    #sampleDataTable td {
-        padding: 12px 16px;
-        text-align: left;
-        border-bottom: 1px solid #e0e0e0;
-        white-space: nowrap;
-        max-width: 240px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        text-overflow: ellipsis;
+    .option-button:hover {
+        background-color: var(--clr-accent);
+        transform: translateY(-2px);
     }
 
-    #sampleDataTable th {
-        background-color: #f5f7fa;
-        font-weight: 600;
-        color: #374151;
-        position: sticky;
-        top: 0;
+    .option-button:active {
+        transform: scale(0.98);
+    }
+
+    /* Correct answer */
+    .option-button.correct {
+        background-color: #16a34a; /* emerald green */
+        border-color: #15803d;
+        color: #ffffff;
+    }
+
+    /* Wrong answer */
+    .option-button.wrong {
+        background-color: #dc2626; /* red-600 */
+        border-color: #b91c1c;
+        color: #ffffff;
+    }
+
+    /* Selected (makes it bigger and outlined) */
+    .option-button.selected {
+        border: 4px solid #2563eb; /* blue-600 */
+        box-shadow: 0 0 10px #60a5fa; /* blue-400 glow */
+        transform: scale(1.08);
         z-index: 1;
     }
 
-    #sampleDataTable td {
-        background-color: #ffffff;
-    }
 
-    #sampleDataTable tr:hover td {
-        background-color: #f0f4f8;
-    }
 
-    #sampleDataTable select {
-        font-size: 13px;
-        padding: 6px 10px;
-        border-radius: 6px;
-        border: 1px solid #d1d5db;
-        background-color: #f9fafb;
-        color: #111827;
-    }
+/* MODALS */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--clr-surface, #fff);
+    color: var(--clr-foreground, #000);
+    padding: 20px;
+    border-radius: 10px;
+    min-width: 300px;
+}
+
+.hidden {
+    display: none;
+}

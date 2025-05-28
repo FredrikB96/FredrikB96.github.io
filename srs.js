@@ -4,7 +4,7 @@ const fsrsParams = FSRS.generatorParameters({ enable_fuzz: false, maximum_interv
 const scheduler = FSRS.fsrs(fsrsParams);
 
 function getFSRSState(word) {
-    const raw = localStorage.getItem("SRS_" + word);
+    const raw = localStorage.getItem(word);
     if (!raw) return null;
     try {
         return JSON.parse(raw);
@@ -30,8 +30,9 @@ function getRatingFromTries(tries) {
     return FSRS.Rating.Again;
 }
 
-function applyFSRS(card, wasCorrect, retryCount) {
+function applyFSRS(card, wasCorrect, retryCount, mode) {
     const now = new Date();
+    const storedData = getFSRSState(card.word) || {}; 
     const stored = getFSRSState(card.word);
 
     let fsrsCard;
@@ -57,14 +58,20 @@ function applyFSRS(card, wasCorrect, retryCount) {
     const rating = wasCorrect ? getRatingFromTries(retryCount) : FSRS.Rating.Again;
     const outcome = scheduler.next(fsrsCard, now, rating);
     const updatedCard = outcome.card;
+    const currentState = { ...storedData };
 
-    saveFSRSState(card.word, {
-        due: updatedCard.due.toDateString(),
+
+
+    currentState[mode] = {
+        due: updatedCard.due.getDate(),
         lastReview: now.toDateString(),
         stability: updatedCard.stability,
         difficulty: updatedCard.difficulty,
         reps: updatedCard.reps,
         lapses: updatedCard.lapses,
+        state: updatedCard.state,
         scheduled: updatedCard.scheduled_days
-    });
+    };
+
+    saveFSRSState(card.word, currentState);
 }

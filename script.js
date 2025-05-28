@@ -21,6 +21,9 @@ let newWordList = [];
 let reviewWordList = [];
 let wordProgress = {};
 
+let testCard;
+let testGrammar;
+let test = [];
 
 
 // ====== EVENT HANDLING =====
@@ -173,7 +176,7 @@ function getQuestionOption(card, mode) {
     const dir = document.getElementById("direction")?.value || direction;
     if (mode === "1") return card.word;
     if (mode === "2") return card.reading;
-    if (mode === "3") return card.definition    ;
+    if (mode === "3") return card.definition;
     if (mode === "4") return dir === "jp-en" ? card.sentence : card.sentenceDefinition;
 }
 
@@ -208,7 +211,7 @@ function decideCardType(sources, tries = 0, maxTries = 3, retryChecked = false, 
             newChecked = true;
         }
 
-        return decideCardType(newSources, tries + 1, maxTries,retryChecked,reviewChecked);
+        return decideCardType(newSources, tries + 1, maxTries, retryChecked, reviewChecked);
     }
     if (pick === "review" && ((reviewWordList.length < 1))) {
         dbg("[DecideCardType] review list empty!");
@@ -266,12 +269,13 @@ function getRetryCard() {
         dbg("[getNewCard] New card list empty!");
     }
 
-    let card = reviewWordList[Math.floor(Math.random() * reviewWordList.length)];
+    let card = retryList[Math.floor(Math.random() * retryList.length)];
     dbg(`[getNewCard] Card selected: ${card.word} `);
     return card;
 }
 
 function getCandidate(card, mode, dir) {
+
     switch (mode) {
         case "1": return card.word;
         case "2": return card.word === card.reading ? null : card.reading;
@@ -289,9 +293,30 @@ function generateOptions(correctCard, grammar, mode) {
     }
 
     const pool = vocabList.filter(card => {
-        if (card.grammar !== grammar) return false;
-        if (mode === "2" && card.word === card.reading) return false;
-        return true;
+        let options = card.grammar.split(",");
+        let validOptions = correctCard.grammar.split(",");
+
+        for (let i = 0; i < options.length; i++) {
+            for (let y = 0; y < validOptions.length; y++) {
+                if (options[i] === validOptions[y]) {
+                    if (mode === "2" && card.word === card.reading) {
+                        console.log(`[PoolList] Skipping correct card, randome card is: Word: ${rand.word} \n   Definition: ${rand.definition} \n   Reading: ${rand.reading} \n   Grammar:${rand.grammar} \n   Sentence: ${rand.sentence} \n   SentenceDefinition: ${rand.sentenceDefinition}`);
+                        return false;
+                    }
+                    console.log(`[PoolList] Adding candidate: ${card.word}`);
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    });
+
+    console.log(`[OptionsPool] Pool size: ${pool.length}`);
+
+    pool.forEach(card => {
+        console.warn(`[OptionsPool] Word: ${card.word} | Definition: ${card.definition} | Reading: ${card.reading} | Grammar: ${card.grammar} | Sentence: ${card.sentence} | SentenceDefinition: ${card.sentenceDefinition}`);
     });
 
     const correct = getCandidate(correctCard, mode, dir);
@@ -304,28 +329,34 @@ function generateOptions(correctCard, grammar, mode) {
     while (options.length < 5 && tries < MAX_TRIES) {
         const rand = pool[Math.floor(Math.random() * pool.length)];
         if (rand === correctCard) {
+            console.warn(`[OptionsPool] Skipping correct card, randome card is: Word: ${rand.word} \n   Definition: ${rand.definition} \n   Reading: ${rand.reading} \n   Grammar:${rand.grammar} \n   Sentence: ${rand.sentence} \n   SentenceDefinition: ${rand.sentenceDefinition}`);
             tries++;
             continue;
         }
 
         const candidate = getCandidate(rand, mode, dir);
         if (candidate && !used.has(candidate)) {
+            console.warn(`[OptionsPool] Adding candidate: ${candidate} | grammar: ${rand.grammar}`);
             options.push(candidate);
             used.add(candidate);
         }
         tries++;
     }
 
+    console.log(`[OptionsPool] Final options: ${options.length}`);
+
     return shuffleArray(options);
 }
 
 function isReview(card) {
-    const cardDate = new Date(card.dueToday);
-    if (cardDate < new Date()) {
-        return true;
+    if (!card.fsrsState) return false;
+    // If any mode is "new", treat as new
+    for (const state of Object.values(card.fsrsState)) {
+        if (state.state === "new") {
+            return false;
+        }
     }
-
-    return false;
+    return true;
 }
 
 function getCurrentCard() {
@@ -373,9 +404,9 @@ function renderOptions(options, correct, mode) {
 
 function updateQuestionSection(currentCard, alternatives, mode) {
     document.getElementById("todayDate").innerText = new Date().toLocaleDateString("en-CA");
-    renderOptions(alternatives, getQuestionOption(currentCard,mode), mode);
+    renderOptions(alternatives, getQuestionOption(currentCard, mode), mode);
     updateHints(currentCard);
-    document.getElementById("question").innerText = getQuestionPrompt(currentCard,mode);
+    document.getElementById("question").innerText = getQuestionPrompt(currentCard, mode);
     document.getElementById("quizSection").classList.remove('hidden');
 }
 
@@ -386,17 +417,17 @@ function sortDecks() {
     newWordList = [];
 
     for (const card of vocabList) {
-        if (isReview(card.word)) {
-            dbg(`[sortDecks] ${card.word} is ${card.dueToday}. Adding to review list`);
+        if (isReview(card) && isDue(card)) {
+            dbg(`[sortDecks] ${card.word} is ${card.dueDate}. Adding to review list`);
             reviewWordList.push(card);
         } else {
-            dbg(`[sortDecks] ${card.word} is ${card.dueToday}. Adding to new word list`);
+            dbg(`[sortDecks] ${card.word} is ${card.dueDate}. Adding to new word list`);
             newWordList.push(card);
         }
     }
 }
 
-function showNextCard() {
+function showNextCard(rerun = false) {
     const sources = ["retry", "new", "review"];
     let mode = document.getElementById("quizMode").value;
     if (mode === "random") {
@@ -428,48 +459,80 @@ function showNextCard() {
             break;
     }
 
+    let cardField = getCandidate(currentCard, mode, document.getElementById("direction").value);
+
+    if (!cardField) {
+        currentCard = showNextCard(true);
+    }
+
+
     carddbg(currentCard);
     let options = generateOptions(currentCard, currentCard.grammar, mode);
     updateQuestionSection(currentCard, options, mode);
+
+    testCard = getCurrentCard();
+    testGrammar = testCard.grammar;
+    test = vocabList.filter(card => {
+        let options = card.grammar.split(",");
+        let validOptions = testGrammar.split(",");
+        for (let i = 0; i < options.length; i++) {
+            for (let y = 0; y < validOptions.length; y++) {
+                if (options[i] === validOptions[y]) {
+                    testCard = card;
+                    return true;
+                }
+            }
+        }
+        return false;
+    });
+
+     return currentCard;
 }
 
 
 function handleAnswer(btn, isCorrect, mode) {
-    if (!btn) {
-        console.warn("Invalid card or mode in handleAnswer.");
-        return;
-    }
 
-    let currentCard = getCurrentCard();
-    let correctAnswer = getCorrectAnswer(currentCard, mode);
-    wordProgress[currentCard.word] = (wordProgress[currentCard.word] || 0) + 1;
-    document.querySelectorAll("#choices button").forEach(b => {
-        b.classList.add(b.textContent === correctAnswer ? "correct" : "wrong");
-        b.style.pointerEvents = "none";
-    });
+        if (!btn) {
+            console.warn("Invalid card or mode in handleAnswer.");
+            return;
+        }
 
-    btn.classList.add("selected");
-    document.getElementById("nextBtn").classList.remove("hidden");
+        let currentCard = getCurrentCard();
+        let correctAnswer = getCorrectAnswer(currentCard, mode);
+        wordProgress[currentCard.word] = (wordProgress[currentCard.word] || 0) + 1;
+        document.querySelectorAll("#choices button").forEach(b => {
+            b.classList.add(b.textContent === correctAnswer ? "correct" : "wrong");
+            b.style.pointerEvents = "none";
+        });
 
-    if (!isCorrect) {
+        btn.classList.add("selected");
+        document.getElementById("nextBtn").classList.remove("hidden");
+
+        if (!isCorrect) {
+            if (newWordList.includes(currentCard)) {
+                let index = newWordList.indexOf(currentCard);
+                newWordList.splice(index, 1);
+            }
+            if (reviewWordList.includes(currentCard)) {
+                let index = reviewWordList.indexOf(currentCard);
+                reviewWordList.splice(index, 1);
+            }
+            retryList.push(currentCard);
+            retryList.forEach(carddbg);
+            return;
+        }
+
+        const retries = wordProgress[currentCard.word] || 0;
+        applyFSRS(currentCard, true, retries, mode);
+        delete wordProgress[currentCard.word];
+
         if (newWordList.includes(currentCard)) {
-            let index = newWordList.indexOf(currentCard);
-            newWordList.splice(index, 1);
+            newWordList.splice(newWordList.indexOf(currentCard), 1);
         }
         if (reviewWordList.includes(currentCard)) {
-            let index = reviewWordList.indexOf(currentCard);
-            reviewWordList.splice(index, 1);
+            reviewWordList.splice(reviewWordList.indexOf(currentCard), 1);
         }
-        retryList.push(currentCard);
-        retryList.forEach(carddbg);
-        return;
+        if (retryList.includes(currentCard)) {
+            retryList.splice(retryList.indexOf(currentCard), 1);
+        }
     }
-
-
-    const retries = wordProgress[currentCard.word] || 0;
-    applyFSRS(currentCard, true, retries);
-    delete wordProgress[currentCard.word];
-
-}
-
-// ====== SRS HANDLING ======

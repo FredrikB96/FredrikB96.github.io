@@ -30,13 +30,14 @@ function loadCustomDeck(file, fieldMap, delimiter = "\t") {
                             row[fieldMap.grammar],
                             row[fieldMap.sentence],
                             row[fieldMap.sentenceDefinition],
-                            getDueDateForWord(row[fieldMap.word])
+                            getDueDateForWord(row[fieldMap.word]),
+                            getFSRSState(row[fieldMap.word])
                         ));
 
                     window.userCards = cards;
                     //cards.forEach(carddbg);
                     showToast(`${cards.length} cards loaded!`);
-                    resolve(cards); 
+                    resolve(cards);
                 } catch (err) {
                     reject("Failed to parse custom deck: " + err);
                 }
@@ -69,12 +70,13 @@ function loadDeckFromText(text, delimiter = "\t") {
                             row[fieldMap.grammar],
                             row[fieldMap.sentence],
                             row[fieldMap.sentenceDefinition],
-                            getDueDateForWord(row[fieldMap.word])
+                            getDueDateForWord(row[fieldMap.word]),
+                            getFSRSState(row[fieldMap.word])
                         ));
 
                     window.userCards = cards;
                     showToast(`${cards.length} cards loaded!`);
-                    resolve(cards); 
+                    resolve(cards);
                 } catch (err) {
                     reject("Failed to convert rows to Card instances: " + err);
                 }
@@ -85,6 +87,11 @@ function loadDeckFromText(text, delimiter = "\t") {
         });
     });
 }
+
+
+
+// ====== STORAGE HANDLING ======
+
 
 
 // debugs ///
@@ -159,33 +166,34 @@ function isDue(word) {
 }
 
 function getDueDateForWord(word) {
-    word = "村";
     if (!word) return new Date(); // fallback
 
+    // Use debug date if requested
     if (document.getElementById("useDebugDate")?.checked) {
         const debugVal = document.getElementById("debugDate")?.value;
         dbg(`[GET_DATE] Used debug date: ${debugVal} for word: ${word}`);
         return new Date(debugVal + "T00:00:00");
     }
 
-    const raw = localStorage.getItem(word);
-    if (!raw) {
-        dbg(`[GET_DATE] No stored progress for word: ${word}, using today`);
-        return new Date();
-    }
-
-    try {
-        const parsed = JSON.parse(raw);
-        const due = parsed?.due;
-        if (due) {
-            dbg(`[GET_DATE] Loaded due date for ${word}: ${due}`);
-            return new Date(due);
+    // Use FSRS state if available
+    const fsrsState = getFSRSState(word);
+    if (fsrsState) {
+        // Find the earliest due date among all modes
+        let dueDates = Object.values(fsrsState)
+            .map(state => state?.due)
+            .filter(Boolean)
+            .map(due => new Date(due))
+            .filter(date => !isNaN(date.getTime()));
+        if (dueDates.length > 0) {
+            // Return the earliest due date
+            const earliest = dueDates.reduce((a, b) => a < b ? a : b);
+            dbg(`[GET_DATE] Loaded FSRS due date for ${word}: ${earliest}`);
+            return earliest;
         }
-    } catch (e) {
-        console.warn(`[GET_DATE] Failed to parse progress for ${word}`, e);
     }
 
-    return new Date(); 
+    dbg(`[GET_DATE] No stored progress for word: ${word}, using today`);
+    return new Date();
 }
 
 
@@ -198,3 +206,4 @@ function addDaysToDate(date, days) {
     result.setDate(result.getDate() + days);
     return result;
 }
+
