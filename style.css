@@ -92,6 +92,18 @@ button {
         z-index: 1;
     }
 
+.question-box {
+    background-color: var(--clr-primary); /* Same as option-button */
+    color: var(--clr-foreground);
+    font-size: 1.75rem;
+    line-height: 1.6;
+    font-weight: 500;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    text-align: center;
+    word-wrap: break-word;
+}
 
 
 /* MODALS */

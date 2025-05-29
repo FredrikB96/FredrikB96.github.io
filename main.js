@@ -9,6 +9,8 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById("quizMode").value = randomMode;
     }
 
+    document.getElementById("todayDisplay").innerText = "📅 Today's Date: " + new Date().toDateString();
+
     // UI elements
     document.documentElement.classList.toggle('dark');
     const isDark = document.documentElement.classList.contains('dark');
