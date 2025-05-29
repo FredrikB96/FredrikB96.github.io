@@ -268,6 +268,7 @@ async function updateSRS(card, mode, isCorrect) {
     state.due = updated.due;
 
     card.fsrsState = fsrsState;
+    showToast(`Next scheduled date: ${card.fsrsState[mode].due}`);
     await putCard(card);
 
     return card.fsrsState;
