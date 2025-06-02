@@ -216,14 +216,6 @@ async function updateSRS(card, mode, isCorrect) {
     const fsrsState = card.fsrsState || {};
     const state = fsrsState[mode];
 
-    //// Patch nulls
-    //if (state.stability == null) state.stability = 0.1;
-    //if (state.difficulty == null) state.difficulty = 5;
-    //if (state.reps == null) state.reps = 0;
-    //if (state.lapses == null) state.lapses = 0;
-    //if (state.state == null) state.state = 0;
-    //if (state.scheduled == null) state.scheduled = 0;
-
     // Convert dates from string to Date
     const now = new Date();
     const prev = {

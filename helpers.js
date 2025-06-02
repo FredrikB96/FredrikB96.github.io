@@ -5,6 +5,9 @@ function openModal(id) {
 }
 function closeModal(id) {
     document.getElementById(id).classList.add("hidden");
+
+    if (id === "startNote") 
+        document.getElementById("startNote").classList.add("hidden");
 }
 
 function extractReading(raw) {
@@ -25,8 +28,8 @@ function dbg(level, ...args) {
 function isDue(dueDateStr, todayDateObj) {
     const due = new Date(dueDateStr);
     const today = new Date(todayDateObj);
-    due.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
+    //due.setHours(0, 0, 0, 0);
+    //today.setHours(0, 0, 0, 0);
     return due <= today;
 }
 
@@ -139,4 +142,150 @@ function getExample(card, mode) {
         else return card.sentence || "";
     }
     return "";
+}
+
+function loadNewCardsSeen() {
+    const saved = JSON.parse(localStorage.getItem("newCardsSeenInfo"));
+    const today = getToday().toISOString().slice(0, 10);
+
+    if (saved && saved.date === today) {
+        return new Set(saved.words);
+    }
+    return new Set(); // New day or nothing stored
+}
+
+function saveNewCardsSeen(set) {
+    localStorage.setItem(
+        "newCardsSeenInfo",
+        JSON.stringify({
+            date: getToday().toISOString().slice(0, 10),
+            words: Array.from(set)
+        })
+    );
+}
+function saveReviewCardsSeen(set) {
+    localStorage.setItem(
+        "reviewCardsSeenInfo",
+        JSON.stringify({
+            date: getToday().toISOString().slice(0, 10),
+            words: Array.from(set)
+        })
+    );
+}
+
+function loadReviewCardsSeen() {
+    const saved = JSON.parse(localStorage.getItem("reviewCardsSeenInfo"));
+    const today = getToday().toISOString().slice(0, 10);
+    if (saved && saved.date === today) {
+        return new Set(saved.words);
+    }
+    return new Set(); // New day or nothing stored
+}
+
+function loadNewCardsSeen() {
+    const saved = JSON.parse(localStorage.getItem("newCardsSeenInfo"));
+    const today = getToday().toISOString().slice(0, 10);
+    if (saved && saved.date === today) {
+        return new Set(saved.words);
+    }
+    return new Set(); // New day or nothing stored
+}
+
+function saveSessionSettings(settings) {
+    localStorage.setItem("sessionSettings", JSON.stringify(settings));
+}
+
+function loadSessionSettings() {
+    const saved = localStorage.getItem("sessionSettings");
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.error("Failed to parse session settings:", e);
+        }
+    }
+    return {}; // Return empty object if nothing saved
+}
+
+
+function resetSessionIfNeeded() {
+    const today = getToday().toISOString().slice(0, 10);
+    if (!window.sessionDate || window.sessionDate !== today) {
+        window.sessionDate = today;
+        window.cardsAnswered = new Set();
+        window.newCardsSeen = new Set();
+        window.reviewCardsSeen = new Set();
+        saveNewCardsSeen(window.newCardsSeen);
+        saveReviewCardsSeen(window.reviewCardsSeen);
+        // Reset any other session-specific state here if needed
+    }
+}
+
+function checkAndResetSessionForLocalStorageKeys(keys, resetFn) {
+    const today = getToday().toISOString().slice(0, 10);
+    let resetNeeded = false;
+
+    // update newCardsSeen and reviewCardsSeen globals as int
+
+
+
+    keys.forEach(key => {
+        const raw = localStorage.getItem(key);
+        if (!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            if (key === "newCardsSeenInfo") {
+                window.newCardsSeen = new Set(data.words);
+            }
+            if (key === "reviewCardsSeenInfo") {
+                window.reviewCardsSeen = new Set(data.words);
+            }
+            // Check for a 'date' property in the stored object
+            if (data.date && data.date !== today) {
+                resetNeeded = true;
+            }
+        } catch (e) {
+            // If parsing fails, assume reset is needed
+            resetNeeded = true;
+        }
+    });
+
+    if (resetNeeded && typeof resetFn === "function") {
+        resetFn();
+    }
+}
+
+function getEligibleNewCards(mode) {
+    const maxNewReached = window.newCardsSeen.size >= window.MaxNewCards;
+    if (!maxNewReached) {
+        // Not at limit: show new cards not yet seen
+        return vocabList.filter(card => {
+            const state = card.fsrsState[mode];
+            return state && state.state === 0;
+        });
+    } else {
+        // At limit: show new cards that have been seen before, but not yet answered in this mode
+        return vocabList.filter(card => {
+            const state = card.fsrsState[mode];
+            return state && state.state === 0 && window.newCardsSeen.has(card.word);
+        });
+    }
+}
+
+function getEligibleReviewCards(mode) {
+    const maxReviewReached = window.reviewCardsSeen.size >= window.MaxReviewCount;
+    const today = getToday();
+    if (!maxReviewReached) {
+        // Not at limit: show due review cards not yet seen
+        return vocabList.filter(card => {
+            const state = card.fsrsState[mode];
+            return state && state.state >= 1 && isDue(state.due, today);
+        });
+    } else {
+        // At limit: show due review cards that have been seen before, but not yet answered in this mode
+        return vocabList.filter(card => {
+            const state = card.fsrsState[mode];
+            return state && state.state >= 1 && isDue(state.due, today) && window.reviewCardsSeen.has(card.word);
+        });
+    }
 }

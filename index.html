@@ -30,6 +30,7 @@
                 <button id="themeToggle">🌓 Toggle Theme</button>
             </nav>
             <h1>Japanese SRS Quiz Trainer</h1>
+            <p id="startNote">Please load deck to start using SRS Quiz Trainer!</p>
 
             <section class="controls-group" aria-label="Deck Controls">
                 <div class="controls">
@@ -77,7 +78,7 @@
                 </ul>
                 <p>📝 Done Cards: <span id="doneCount">0</span></p>
                 <p>⏳ Cards Due: <span id="dueCount">0</span></p>
-                <p>Total New Remaining: <span id="newLeftCount">...</span></p>
+                <p>Total new remaining in deck: <span id="newLeftCount">...</span></p>
             </aside>
 
             <section id="quizSection" class="hidden" aria-label="Quiz Section">
@@ -134,7 +135,7 @@
             <section class="settings-section">
                 <h4>🔍 Debug Settings</h4>
                 <label>
-                    <input type="checkbox" id="debugToggle" checked />
+                    <input type="checkbox" id="debugToggle" />
                     Enable Debug Mode
                 </label>
                 <div id="debugOptions" class="hidden">
@@ -172,3 +173,6 @@
 
 </body>
 </html>
+<footer style="text-align:center; font-size:0.9em; color:#888; margin-top:2em;">
+    <span id="versionFootnote"></span>
+</footer>

@@ -3,13 +3,54 @@
 // === EVENT HANDLING ===
 // Add event listeners to the buttons
 window.addEventListener('DOMContentLoaded', () => {
+
+    dbg("[DOMContentLoaded] Initializing app...");
+    showToast("Welcome to the Flashcard App! 🎉!");
+
+    let settings = loadSessionSettings();
+    if (settings) {
+        window.MaxReviewCount = settings.MaxReviewCount || 200;
+        window.MaxNewCards = settings.MaxNewCards || 20;
+        // Also update the input fields to reflect loaded values
+        document.getElementById("maxReviewInput").value = window.MaxReviewCount;
+        document.getElementById("maxNewInput").value = window.MaxNewCards;
+    }
+
+    const version = window.APP_VERSION || "dev";
+    const el = document.getElementById("versionFootnote");
+    if (el) el.textContent = `Version: ${version}`;
+
     let mode = document.getElementById("quizMode").value;
     if (mode === "random") {
         const randomMode = MODES[Math.floor(Math.random() * MODES.length)];
         document.getElementById("quizMode").value = randomMode;
     }
 
-    document.getElementById("todayDisplay").innerText = "📅 Today's Date: " + new Date().toDateString();
+    document.getElementById("todayDisplay").innerText = "📅 Today's Date: " + getToday().toISOString().slice(0, 10);
+
+    checkAndResetSessionForLocalStorageKeys(
+        ["newCardsSeenInfo", "reviewCardsSeenInfo"], // add any other relevant keys here
+        resetSessionIfNeeded
+    );
+
+    document.getElementById("applyLimitsBtn")?.addEventListener("click", () => {
+        // apply limits from input fields ( maxReviewCount, MaxNewCards ) && debugDate if enabled
+        let maxReviewCount = parseInt(document.getElementById("maxReviewInput").value) || 200;
+        let maxNewCards = parseInt(document.getElementById("maxNewInput").value) || 20;
+
+        window.MaxReviewCount = maxReviewCount;
+        window.MaxNewCards = maxNewCards;
+        updateStatsGlobals();
+        updateStatsPanel();
+
+        saveSessionSettings({
+            MaxReviewCount: window.MaxReviewCount,
+            MaxNewCards: window.MaxNewCards
+        });
+
+        closeModal("settingsModal");
+        showToast(`Limits applied: Max Reviews = ${window.MaxReviewCount}, Max New Cards = ${window.MaxNewCards}`);
+    });
 
     // UI elements
     document.documentElement.classList.toggle('dark');
@@ -59,6 +100,7 @@ window.addEventListener('DOMContentLoaded', () => {
         } else {
             showToast(`Cards loaded: ${vocabList.length}`);
             closeModal("defaultDeckModal");
+            updateStatsGlobals();
             showNextCard();
         }
     });
@@ -195,6 +237,7 @@ async function confirmFieldMapping() {
     vocabList = cards;
     showToast(`Cards loaded: ${vocabList.length}`);
     dbg(`[ConfirmFieldMapping] Cards loaded: ${vocabList.length}`);
+    updateStatsGlobals();
     showNextCard();
 }
 
@@ -232,6 +275,37 @@ function renderQuestionAndOptions(card, options, mode) {
     document.getElementById("quizSection").classList.remove("hidden");
 }
 
+function updateStatsGlobals() {
+
+    const maxNewReached = window.newCardsSeen.size >= window.MaxNewCards;
+    const maxReviewReached = window.reviewCardsSeen.size >= window.MaxReviewCount;
+
+    //set window[`mode${i}Max`] to the number of cards due for that mode from vocabList using same criteria as dueCards and newCards below
+    for (let i = 1; i <= MODES.length; i++) {
+        // Count new cards due for this mode
+        const newCards = getEligibleNewCards(i);
+        const reviews = getEligibleReviewCards(i);
+
+        let newCount = newCards.length;
+        let reviewCount = reviews.length;
+        // Cap to MaxNewCards + MaxReviewCount
+        
+        let maxNew = newCount > window.MaxNewCards ? window.MaxNewCards : newCount;
+        let maxReview = reviewCount > window.MaxReviewCount ? window.MaxReviewCount : reviewCount;
+
+        if(window.newCardsSeen.has({i}))
+
+        if(maxNewReached) maxNew = 0;
+        if(maxReviewReached) maxReview = 0;
+        
+        //if (max > maxAllowed) max = maxAllowed;
+
+        window[`mode${i}Max`] = maxNew + maxReview;
+
+        window[`mode${i}ReviewMax`] = maxReview; 
+    }
+}
+
 function updateStatsPanel() {
     for (let i = 1; i <= 4; i++) {
         document.getElementById(`mode${i}Count`).textContent = window[`mode${i}Count`];
@@ -253,6 +327,7 @@ function showNextCard() {
         showToast("No cards available!");
         return;
     }
+
     const options = generateOptions(card, mode);
 
     // Store for mode switching
@@ -263,53 +338,71 @@ function showNextCard() {
 }
 
 
-function decideCardType(sources = ["new", "review"], maxTries = 3,mode) {
+function decideCardType(sources = ["new", "review"], maxTries = 3, mode) {
     let tries = 0;
 
     const today = getToday();
 
-    while (tries < maxTries) {
-        // Get due and new cards for the current mode
-        const dueCards = vocabList.filter(card => {
-            const state = card.fsrsState[mode];
-            return state && state.state >= 1 && isDue(state.due, today);
-        });
-        const newCards = vocabList.filter(card => {
-            const state = card.fsrsState[mode];
-            return state && state.state === 0;
-        });
+    if (!window.newCardsSeen) window.newCardsSeen = loadNewCardsSeen();
+    if (!window.reviewCardsSeen) window.reviewCardsSeen = loadReviewCardsSeen();
 
-        // If no cards at all, return null
-        if (newCards.length < 1 && dueCards.length < 1) {
+    const maxNewReached = window.newCardsSeen.size >= window.MaxNewCards;
+    const maxReviewReached = window.reviewCardsSeen.size >= window.MaxReviewCount;
+
+    while (tries < maxTries) {
+        const newCards = getEligibleNewCards(mode);
+        const reviewCards = getEligibleReviewCards(mode);
+
+        if (maxNewReached && maxReviewReached && newCards.length === 0 && reviewCards.length === 0) {
             return null;
         }
 
-        // Filter sources to only those with available cards
         const availableSources = sources.filter(type => {
             if (type === "new") return newCards.length > 0;
-            if (type === "review") return dueCards.length > 0;
+            if (type === "review") return reviewCards.length > 0;
             return false;
         });
 
         if (availableSources.length === 0) {
             tries++;
-            continue; // Try again (shouldn't happen, but safe)
+            continue;
         }
 
-        // Pick randomly from available sources
         const pick = availableSources[Math.floor(Math.random() * availableSources.length)];
 
         if (pick === "new") {
-            return newCards[Math.floor(Math.random() * newCards.length)];
+            const card = newCards[Math.floor(Math.random() * newCards.length)];
+            const cardPrompt = getQuestionPrompt(card, mode);
+            const cardOption = getQuestionOption(card, mode);
+            if (cardPrompt === "" || cardOption === "") {
+                dbg("[decideCardType] selecting new card due to card with empty prompt or option:", card.word, cardPrompt, cardOption);
+                tries++;
+                continue;
+            }
+
+
+
+            return card;
         }
+
         if (pick === "review") {
-            return dueCards[Math.floor(Math.random() * dueCards.length)];
+            const card = reviewCards[Math.floor(Math.random() * reviewCards.length)];
+            const cardPrompt = getQuestionPrompt(card, mode);
+            const cardOption = getQuestionOption(card, mode);
+            if (cardPrompt === "" || cardOption === "") {
+                dbg("[decideCardType] selecting new card due to card with empty prompt or option:", card.word, cardPrompt, cardOption);
+                tries++;
+                continue;
+            }
+
+            return card;
         }
-
-        return null;
     }
+    // If we reach here, we either hit max attempts or ran out of cards
 
-    dbg("[decideCardType] Max fallback attempts reached");
+    document.getElementById("question").textContent = "No cards due, Come back tomorrow!";
+    document.getElementById("choices").innerHTML = "";
+    dbg("[decideCardType] Max fallback attempts reached or no cards left.");
     return null;
 }
 
@@ -385,17 +478,35 @@ async function handleAnswer(card, mode, selectedOption) {
             selectedBtn.classList.add("correct");
             isCorrect = true;
             showToast("Correct!");
-
-            const cardKey = `${card.word}|${mode}`;
-            if (!window.cardsAnswered.has(cardKey)) {
-                window[`mode${mode}Count`] = (window[`mode${mode}Count`] || 0) + 1;
-                window.cardsAnswered.add(cardKey);
-            }
         } else {
             selectedBtn.classList.add("wrong");
             if (correctBtn) correctBtn.classList.add("correct");
             showToast(`Incorrect! Correct answer: ${correctAnswer}`);
         }
+    }
+
+    const cardKey = `${card.word}|${mode}`;
+
+    const isReview = card.fsrsState[mode] && card.fsrsState[mode].state >= 1;
+    const isNew = !isReview;
+
+    if (isNew && !window.newCardsSeen.has(card.word)) {
+        window.newCardsSeen.add(card.word);
+        saveNewCardsSeen(window.newCardsSeen);
+    }
+    if (isReview && !window.reviewCardsSeen.has(card.word)) {
+        window.reviewCardsSeen.add(card.word);
+        saveReviewCardsSeen(window.reviewCardsSeen);
+    }
+
+    if (!window.cardsAnswered.has(cardKey)) {
+        const wasReview = card.fsrsState[mode] && card.fsrsState[mode].state >= 1;
+        if (wasReview) {
+            window[`mode${mode}ReviewCount`] = (window[`mode${mode}ReviewCount`] || 0) + 1;
+        }
+
+        window[`mode${mode}Count`] = (window[`mode${mode}Count`] || 0) + 1;
+        window.cardsAnswered.add(cardKey);
     }
 
     card.fsrsState = await updateSRS(card, mode, isCorrect);

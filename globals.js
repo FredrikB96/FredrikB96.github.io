@@ -9,6 +9,8 @@ const globalFieldMap = {
 
 const MODES = [1, 2, 3, 4];
 
+window.APP_VERSION = "1.2.0";
+
 window.MaxReviewCount = 200; // Maximum number of reviews per session
 window.MaxNewCards = 20; // Maximum number of new cards per session
 
@@ -30,11 +32,13 @@ window.mode4Max = 0;
 window.mode4ReviewCount = 0;
 window.mode4ReviewMax = 0;
 
-window.doneCount = 0;
-window.dueCount = 0;
-window.newLeftCount = 0;
+window.doneCount = 0; // Total cards answered in this session
+window.dueCount = 0; // Total cards due for this session
+window.newLeftCount = 0; // Total new cards left in deck
 
 window.cardsAnswered = new Set();
+window.newCardsSeen = new Set();
+window.reviewCardsSeen = new Set();
 
 let vocabList = [];
 
