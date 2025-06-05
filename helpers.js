@@ -289,3 +289,29 @@ function getEligibleReviewCards(mode) {
         });
     }
 }
+
+async function printAllReviews() {
+    const cards = await getAllCards();
+    const now = new Date();
+
+    cards.forEach(card => {
+        let isDue = false;
+        let dueModes = [];
+
+        // Check each mode (1-4) for due review
+        for (let mode = 1; mode <= 4; mode++) {
+            const state = card.fsrsState && card.fsrsState[mode];
+            if (state && state.state >= 1 && new Date(state.due) <= now) {
+                isDue = true;
+                dueModes.push(mode);
+            }
+        }
+
+        console.log({
+            word: card.word,
+            fsrsState: card.fsrsState,
+            isDue: isDue ? "Yes" : "No",
+            dueModes: dueModes.length ? dueModes : undefined
+        });
+    });
+}

@@ -52,6 +52,12 @@ window.addEventListener('DOMContentLoaded', () => {
         showToast(`Limits applied: Max Reviews = ${window.MaxReviewCount}, Max New Cards = ${window.MaxNewCards}`);
     });
 
+    document.getElementById("printReviews")?.addEventListener("click", () => {
+        printAllReviews();
+        showToast("Reviews printed to console. Check the console for details.");
+        closeModal("settingsModal");
+    });
+
     // UI elements
     document.documentElement.classList.toggle('dark');
     const isDark = document.documentElement.classList.contains('dark');
@@ -316,8 +322,17 @@ function updateStatsPanel() {
 
     document.getElementById('doneCount').textContent = window.doneCount;
     document.getElementById('dueCount').textContent = window.dueCount;
-    document.getElementById('newLeftCount').textContent = window.newLeftCount;
+    document.getElementById('newLeftCount').textContent = vocabList.filter(card => {
+        for (let i = 1; i <= MODES.length; i++) {
+            const state = card.fsrsState[i];
+            if (state && !(state.state === 0)) {
+                return false;
+            }
+        }
+        return true;
+    }).length;
 }
+
 
 function showNextCard() {
     updateStatsPanel();
