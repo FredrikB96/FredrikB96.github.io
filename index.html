@@ -674,15 +674,252 @@ header {
   .meal-editor { grid-template-columns: 1fr; }
   .sidebar { width: 220px; }
 }
+
+/* =====================================================
+   MOBILE LAYOUT  (≤ 700 px)
+   - Bottom tab bar replaces header nav
+   - Sidebar replaced by slide-up meal sheet
+   - Single-column, touch-friendly everything
+   ===================================================== */
 @media (max-width: 700px) {
-  .app { flex-direction: column; height: auto; }
-  .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
-  .meal-list { display: flex; flex-direction: row; overflow-x: auto; padding: 8px; gap: 6px; }
-  .meal-item { margin-bottom: 0; flex-shrink: 0; min-width: 140px; }
-  .content { height: auto; overflow-y: visible; }
-  header { padding: 0 16px; }
-  .meal-editor { padding: 16px; }
-  .daily-view { padding: 16px; }
+
+  /* ---------- global ---------- */
+  body { -webkit-tap-highlight-color: transparent; }
+
+  /* ---------- header ---------- */
+  header {
+    padding: 0 14px;
+    height: 52px;
+  }
+  .nav-tabs { display: none; }          /* replaced by bottom bar */
+  .header-actions { gap: 6px; }
+  .hdr-btn { padding: 7px 11px; font-size: 0.68rem; }
+  .logo { font-size: 1rem; }
+
+  /* ---------- bottom tab bar ---------- */
+  .bottom-nav {
+    display: flex !important;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 62px;
+    background: rgba(10,11,11,0.96);
+    border-top: 1px solid var(--border2);
+    backdrop-filter: blur(20px);
+    z-index: 300;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .bn-tab {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    cursor: pointer; border: none; background: none;
+    color: var(--muted2); transition: color 0.15s;
+    font-family: 'DM Mono', monospace; font-size: 0.55rem;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 0; -webkit-tap-highlight-color: transparent;
+  }
+  .bn-tab.active { color: var(--accent); }
+  .bn-tab svg { width: 22px; height: 22px; stroke-width: 1.6; }
+  .bn-tab.meals-tab svg, .bn-tab.daily-tab svg { fill: none; stroke: currentColor; }
+
+  /* ---------- app shell ---------- */
+  .app {
+    flex-direction: column;
+    height: calc(100vh - 52px);
+    padding-bottom: 62px; /* room for bottom nav */
+  }
+
+  /* ---------- sidebar → hidden on mobile (replaced by sheet) ---------- */
+  .sidebar { display: none; }
+
+  /* ---------- meal picker sheet ---------- */
+  .meal-sheet-overlay {
+    display: block !important;
+    position: fixed; inset: 0; z-index: 400;
+    background: rgba(0,0,0,0.6);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+    backdrop-filter: blur(4px);
+  }
+  .meal-sheet-overlay.open { opacity: 1; pointer-events: all; }
+
+  .meal-sheet {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 401;
+    background: var(--surface);
+    border-top: 1px solid var(--border2);
+    border-radius: 20px 20px 0 0;
+    max-height: 72vh;
+    display: flex; flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .meal-sheet-overlay.open .meal-sheet { transform: translateY(0); }
+
+  .meal-sheet-handle {
+    width: 36px; height: 4px; background: var(--border2);
+    border-radius: 2px; margin: 12px auto 0; flex-shrink: 0;
+  }
+  .meal-sheet-header {
+    padding: 14px 18px 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .meal-sheet-title {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem;
+  }
+  .meal-sheet-add {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--accent); color: var(--bg); border: none;
+    font-size: 1.2rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .meal-sheet-list {
+    overflow-y: auto; padding: 4px 12px 16px; flex: 1;
+  }
+  .meal-sheet-item {
+    padding: 14px 14px; border-radius: 12px; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.15s;
+    margin-bottom: 6px; display: flex; align-items: center;
+    justify-content: space-between; gap: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .meal-sheet-item:active { background: var(--surface3); }
+  .meal-sheet-item.active {
+    background: var(--surface2); border-color: var(--border2);
+  }
+  .meal-sheet-item.active .msi-name { color: var(--accent); }
+  .msi-left { flex: 1; min-width: 0; }
+  .msi-name {
+    font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.9rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .msi-stats { font-size: 0.67rem; color: var(--muted2); margin-top: 3px; display: flex; gap: 8px; }
+  .msi-del {
+    width: 30px; height: 30px; border-radius: 8px;
+    border: 1px solid var(--border2); background: none; color: var(--muted);
+    cursor: pointer; font-size: 0.8rem; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------- meal bar (active meal indicator strip) ---------- */
+  .mobile-meal-bar {
+    display: flex !important;
+    align-items: center; justify-content: space-between;
+    padding: 10px 16px 0;
+    gap: 10px;
+  }
+  .mmb-label {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+    flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mmb-switch {
+    padding: 7px 13px; border-radius: 8px;
+    border: 1px solid var(--border2); background: var(--surface2);
+    color: var(--muted2); font-family: 'DM Mono', monospace;
+    font-size: 0.68rem; cursor: pointer; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- content area ---------- */
+  .content { flex: 1; overflow-y: auto; }
+
+  /* ---------- meal editor ---------- */
+  .meal-editor {
+    padding: 12px 14px 24px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .meal-name-row { margin-bottom: 0; }
+  .meal-name-input { font-size: 1.15rem; }
+  .add-card { padding: 14px 14px; }
+  .add-card-header { margin-bottom: 10px; }
+  .add-card-title { font-size: 0.75rem; }
+
+  /* search row on mobile */
+  .search-row { gap: 6px; }
+  .search-btn { padding: 9px 10px; font-size: 0.72rem; }
+
+  /* form grid: 2 columns on mobile */
+  .form-row-main  { grid-template-columns: 1fr 1fr; }
+  .form-row-per100 { grid-template-columns: 1fr 1fr; }
+  .form-row-main .span2  { grid-column: span 2; }
+  .form-row-per100 .span2 { grid-column: span 2; }
+
+  /* touch-sized add button */
+  .add-btn { padding: 13px; font-size: 0.85rem; }
+
+  /* ingredient table on mobile — cards instead of table */
+  .ing-table { min-width: unset; font-size: 0.75rem; }
+  .ing-table thead { display: none; }
+  .ing-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .ing-table tbody tr:hover { background: none; }
+  /* name cell spans full width */
+  .ing-table td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  /* kcal */
+  .ing-table td:nth-child(2) { grid-column: 1; grid-row: 2; font-size: 0.75rem; }
+  /* protein */
+  .ing-table td:nth-child(3) { grid-column: 1; grid-row: 3; }
+  /* carbs */
+  .ing-table td:nth-child(4) { display: none; }
+  /* fat */
+  .ing-table td:nth-child(5) { display: none; }
+  /* per portion */
+  .ing-table td:nth-child(6) { display: none; }
+  /* actions — right side, spans rows */
+  .ing-table td:nth-child(7) {
+    grid-column: 2; grid-row: 1 / 4;
+    display: flex; flex-direction: column;
+    align-items: flex-end; justify-content: center; gap: 6px;
+  }
+  .del-btn, .edit-btn {
+    width: 32px; height: 32px; display: flex;
+    align-items: center; justify-content: center;
+    padding: 0; font-size: 0.85rem;
+  }
+  .ing-edit-row { display: block !important; }
+  .ing-edit-row td { display: block; padding: 0; border: none; }
+
+  /* summary card below editor on mobile */
+  .meal-summary { position: static; }
+
+  /* ---------- daily view ---------- */
+  .daily-view { padding: 14px 14px 24px; }
+  .daily-title { font-size: 1.3rem; }
+  .goals-grid { grid-template-columns: 1fr 1fr; }
+  .daily-stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .radial-wrap { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mc-table { font-size: 0.72rem; }
+  .mc-table th, .mc-table td { padding: 10px 10px; }
+  .mc-bar-cell { display: none; }
+
+  /* ---------- modal ---------- */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    border-radius: 20px 20px 0 0; max-width: 100%;
+    max-height: 90vh; margin: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .modal-macro-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* ---------- scanner ---------- */
+  .scanner-overlay { padding: 0; align-items: flex-end; }
+  .scanner-box {
+    border-radius: 20px 20px 0 0; max-width: 100%;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ---------- toast ---------- */
+  .toast { bottom: 80px; font-size: 0.72rem; }
+
+  /* ---------- hide desktop edit-row column layout on mobile ---------- */
+  .ing-edit-row > td > div[style*="grid-template-columns:2fr"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
 }
 </style>
 </head>
@@ -713,6 +950,11 @@ header {
 
   <div class="content">
     <div class="view active" id="view-editor">
+      <!-- MOBILE: active meal bar with switch button -->
+      <div class="mobile-meal-bar" id="mobileMealBar" style="display:none">
+        <div class="mmb-label" id="mobileMealName">—</div>
+        <button class="mmb-switch" onclick="openMealSheet()">⇅ Switch Meal</button>
+      </div>
       <div id="editorContent"></div>
     </div>
 
@@ -761,6 +1003,34 @@ header {
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- MOBILE: bottom tab bar (hidden on desktop via CSS) -->
+<nav class="bottom-nav" style="display:none">
+  <button class="bn-tab meals-tab active" id="bnMeals" onclick="switchView('editor')">
+    <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    Meals
+  </button>
+  <button class="bn-tab add-tab" onclick="openMealSheet()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+    Add Meal
+  </button>
+  <button class="bn-tab daily-tab" id="bnDaily" onclick="switchView('daily')">
+    <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round"/></svg>
+    Daily
+  </button>
+</nav>
+
+<!-- MOBILE: meal picker sheet -->
+<div class="meal-sheet-overlay" id="mealSheetOverlay" style="display:none" onclick="closeMealSheet(event)">
+  <div class="meal-sheet" id="mealSheet">
+    <div class="meal-sheet-handle"></div>
+    <div class="meal-sheet-header">
+      <div class="meal-sheet-title">Meal Plan</div>
+      <button class="meal-sheet-add" onclick="createMeal()">+</button>
+    </div>
+    <div class="meal-sheet-list" id="mealSheetList"></div>
   </div>
 </div>
 
@@ -907,26 +1177,78 @@ function renderSidebar() {
   const list = document.getElementById('mealList');
   if (meals.length === 0) {
     list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.72rem">No meals yet</div>`;
+  } else {
+    list.innerHTML = meals.map(m => {
+      const pm = perMealTotals(m);
+      return `
+        <div class="meal-item${m.id === activeMealId ? ' active' : ''}" onclick="selectMeal(${m.id})">
+          <div class="meal-item-name">
+            ${esc(m.name)}<span class="meal-kcal-badge">${fmt(pm.kcal)} kcal</span>
+          </div>
+          <div class="meal-item-stats">
+            <span>×${m.portions}</span>
+            <span style="color:var(--protein)">${fmt(pm.protein)}g P</span>
+            <span style="color:var(--carbs)">${fmt(pm.carbs)}g C</span>
+            <span style="color:var(--fat)">${fmt(pm.fat)}g F</span>
+          </div>
+          <div class="meal-item-actions">
+            <button class="icon-btn" onclick="deleteMeal(${m.id}, event)" title="Delete">✕</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  renderMobileSheet();
+  renderMobileMealBar();
+}
+
+function renderMobileSheet() {
+  const list = document.getElementById('mealSheetList');
+  if (!list) return;
+  if (meals.length === 0) {
+    list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.75rem">No meals yet — tap + to add one</div>`;
     return;
   }
   list.innerHTML = meals.map(m => {
     const pm = perMealTotals(m);
     return `
-      <div class="meal-item${m.id === activeMealId ? ' active' : ''}" onclick="selectMeal(${m.id})">
-        <div class="meal-item-name">
-          ${esc(m.name)}<span class="meal-kcal-badge">${fmt(pm.kcal)} kcal</span>
+      <div class="meal-sheet-item${m.id === activeMealId ? ' active' : ''}" onclick="selectMealMobile(${m.id})">
+        <div class="msi-left">
+          <div class="msi-name">${esc(m.name)}</div>
+          <div class="msi-stats">
+            <span style="color:var(--kcal)">${fmt(pm.kcal)} kcal</span>
+            <span>×${m.portions}</span>
+            <span style="color:var(--protein)">${fmt(pm.protein)}g P</span>
+            <span style="color:var(--carbs)">${fmt(pm.carbs)}g C</span>
+            <span style="color:var(--fat)">${fmt(pm.fat)}g F</span>
+          </div>
         </div>
-        <div class="meal-item-stats">
-          <span>×${m.portions}</span>
-          <span style="color:var(--protein)">${fmt(pm.protein)}g P</span>
-          <span style="color:var(--carbs)">${fmt(pm.carbs)}g C</span>
-          <span style="color:var(--fat)">${fmt(pm.fat)}g F</span>
-        </div>
-        <div class="meal-item-actions">
-          <button class="icon-btn" onclick="deleteMeal(${m.id}, event)" title="Delete">✕</button>
-        </div>
+        <button class="msi-del" onclick="deleteMeal(${m.id}, event)">✕</button>
       </div>`;
   }).join('');
+}
+
+function renderMobileMealBar() {
+  const bar  = document.getElementById('mobileMealBar');
+  const name = document.getElementById('mobileMealName');
+  if (!bar || !name) return;
+  const meal = getActive();
+  name.textContent = meal ? meal.name : '—';
+}
+
+function openMealSheet() {
+  renderMobileSheet();
+  document.getElementById('mealSheetOverlay').classList.add('open');
+}
+
+function closeMealSheet(e) {
+  if (!e || e.target === document.getElementById('mealSheetOverlay')) {
+    document.getElementById('mealSheetOverlay').classList.remove('open');
+  }
+}
+
+function selectMealMobile(id) {
+  selectMeal(id);
+  closeMealSheet();
 }
 
 // ===== EDITOR =====
@@ -1706,6 +2028,11 @@ function switchView(v) {
   document.querySelectorAll('.nav-tab').forEach((el, i) => {
     el.classList.toggle('active', (i === 0 && v === 'editor') || (i === 1 && v === 'daily'));
   });
+  // sync bottom nav
+  const bnMeals = document.getElementById('bnMeals');
+  const bnDaily = document.getElementById('bnDaily');
+  if (bnMeals) bnMeals.classList.toggle('active', v === 'editor');
+  if (bnDaily) bnDaily.classList.toggle('active', v === 'daily');
   if (v === 'daily') updateDaily();
 }
 
@@ -2286,8 +2613,22 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ===== MOBILE VISIBILITY =====
+function applyMobileVisibility() {
+  const isMobile = window.matchMedia('(max-width: 700px)').matches;
+  const bottomNav       = document.querySelector('.bottom-nav');
+  const mealSheetOverlay = document.getElementById('mealSheetOverlay');
+  const mobileMealBar   = document.getElementById('mobileMealBar');
+  if (bottomNav)        bottomNav.style.display       = isMobile ? 'flex'  : 'none';
+  if (mealSheetOverlay) mealSheetOverlay.style.display = isMobile ? 'block' : 'none';
+  if (mobileMealBar)    mobileMealBar.style.display    = isMobile ? 'flex'  : 'none';
+}
+
+window.addEventListener('resize', applyMobileVisibility);
+
 // ===== START =====
 init();
+applyMobileVisibility();
 </script>
 </body>
 </html>
