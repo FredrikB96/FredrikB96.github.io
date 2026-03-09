@@ -1,178 +1,2293 @@
-﻿<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Japanese SRS Quiz Trainer" />
-    <meta name="keywords" content="SRS, Japanese, Quiz, Trainer" />
-    <meta name="author" content="" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MealBox Macro Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0b0b;
+  --surface: #111313;
+  --surface2: #181b1b;
+  --surface3: #1f2323;
+  --border: #252929;
+  --border2: #2e3333;
+  --accent: #c8f564;
+  --accent3: #f56464;
+  --text: #e2e8e2;
+  --muted: #5a6060;
+  --muted2: #7a8585;
+  --protein: #7eb8f7;
+  --carbs: #ffd080;
+  --fat: #f0908e;
+  --kcal: #c8f564;
+}
 
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css" />
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <title>SRS Trainer</title>
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="https://unpkg.com/ts-fsrs@4.7.1/dist/index.umd.js"></script>
-    <script src="Flashcard.js"></script>
-    <script src="globals.js"></script>
-    <script src="helpers.js"></script>
-    <script src="scheduler.js"></script>
-    <script src="main.js"></script>
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 0 36px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(10,11,11,0.94);
+  backdrop-filter: blur(16px);
+  z-index: 200;
+}
+
+.logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.03em; }
+.logo span { color: var(--accent); }
+
+.nav-tabs { display: flex; gap: 4px; }
+.nav-tab {
+  padding: 7px 16px; border-radius: 8px;
+  font-family: 'DM Mono', monospace; font-size: 0.72rem;
+  cursor: pointer; border: 1px solid transparent;
+  color: var(--muted2); background: none;
+  transition: all 0.18s; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.nav-tab:hover { color: var(--text); border-color: var(--border2); }
+.nav-tab.active { background: var(--surface2); border-color: var(--border2); color: var(--accent); }
+
+.app { display: flex; height: calc(100vh - 58px); }
+
+/* SIDEBAR */
+.sidebar {
+  width: 260px; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-header {
+  padding: 18px 18px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.add-meal-btn {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--accent); color: var(--bg); border: none;
+  font-size: 1.1rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: opacity 0.15s;
+}
+.add-meal-btn:hover { opacity: 0.82; }
+.meal-list { flex: 1; overflow-y: auto; padding: 10px; }
+.meal-item {
+  padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  margin-bottom: 4px; border: 1px solid transparent;
+  transition: all 0.15s; position: relative;
+}
+.meal-item:hover { background: var(--surface2); border-color: var(--border); }
+.meal-item.active { background: var(--surface2); border-color: var(--border2); }
+.meal-item.active::before {
+  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 3px; background: var(--accent); border-radius: 0 2px 2px 0;
+}
+.meal-item-name {
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.82rem;
+  margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
+}
+.meal-item-stats { font-size: 0.65rem; color: var(--muted2); display: flex; gap: 8px; }
+.meal-kcal-badge {
+  font-size: 0.65rem; color: var(--accent);
+  background: rgba(200,245,100,0.1); border-radius: 4px; padding: 1px 5px;
+}
+.meal-item-actions {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  display: none; gap: 4px;
+}
+.meal-item:hover .meal-item-actions { display: flex; }
+.icon-btn {
+  width: 22px; height: 22px; background: var(--surface3);
+  border: 1px solid var(--border2); border-radius: 5px;
+  color: var(--muted2); cursor: pointer; font-size: 0.7rem;
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+}
+.icon-btn:hover { color: var(--accent3); border-color: var(--accent3); }
+
+/* CONTENT */
+.content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.view { display: none; }
+.view.active { display: flex; flex-direction: column; flex: 1; }
+
+/* MEAL EDITOR */
+.meal-editor {
+  padding: 28px 32px; flex: 1;
+  display: grid; grid-template-columns: 1fr 320px;
+  gap: 28px; align-items: start;
+}
+
+.section-label {
+  font-size: 0.6rem; text-transform: uppercase;
+  letter-spacing: 0.15em; color: var(--muted); margin-bottom: 12px;
+}
+
+.meal-name-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 22px;
+}
+.meal-name-input {
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.4rem;
+  background: none; border: none; color: var(--text); outline: none;
+  border-bottom: 2px solid var(--border2); padding-bottom: 4px;
+  flex: 1; transition: border-color 0.15s;
+}
+.meal-name-input:focus { border-color: var(--accent); }
+.meal-portion-wrap {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.72rem; color: var(--muted2); flex-shrink: 0;
+}
+.portion-input {
+  width: 46px; background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 6px; color: var(--accent); font-family: 'Syne', sans-serif;
+  font-weight: 700; font-size: 0.9rem; text-align: center;
+  padding: 4px 6px; outline: none; -moz-appearance: textfield;
+}
+.portion-input::-webkit-outer-spin-button,
+.portion-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.portion-input:focus { border-color: var(--accent); }
+
+/* ADD INGREDIENT FORM */
+.add-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;
+}
+.add-card-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.add-card-title {
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
+  color: var(--muted2); text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+/* Mode toggle */
+.mode-toggle {
+  display: flex; gap: 0; border: 1px solid var(--border2); border-radius: 8px; overflow: hidden;
+}
+.mode-btn {
+  padding: 5px 12px; font-family: 'DM Mono', monospace; font-size: 0.65rem;
+  cursor: pointer; border: none; background: none; color: var(--muted2);
+  transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.mode-btn.active { background: var(--accent); color: var(--bg); font-weight: 600; }
+
+/* Per-100g hint box */
+.hint-box {
+  background: rgba(200,245,100,0.05); border: 1px solid rgba(200,245,100,0.15);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;
+  font-size: 0.68rem; color: var(--muted2); line-height: 1.5;
+}
+.hint-box strong { color: var(--accent); }
+
+/* Live preview strip */
+.live-preview {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;
+  display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+  min-height: 38px;
+}
+.lp-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-right: 4px; }
+.lp-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; }
+.lp-empty { font-size: 0.68rem; color: var(--muted); font-style: italic; }
+
+.form-row {
+  display: grid; gap: 8px; margin-bottom: 12px;
+}
+.form-row-main { grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr; }
+.form-row-per100 { grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr; }
+
+@media (max-width: 900px) {
+  .form-row-main { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row-main .span2 { grid-column: span 3; }
+  .form-row-per100 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row-per100 .span2 { grid-column: span 3; }
+}
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.field input {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  padding: 8px 10px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 0.8rem; outline: none;
+  transition: border-color 0.15s; width: 100%; -moz-appearance: textfield;
+}
+.field input::-webkit-outer-spin-button,
+.field input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.field input:focus { border-color: var(--accent); }
+.field input::placeholder { color: var(--muted); opacity: 0.5; }
+.field input.highlight { border-color: rgba(200,245,100,0.4); background: rgba(200,245,100,0.04); }
+
+.add-btn {
+  width: 100%; padding: 10px; background: var(--accent); color: var(--bg); border: none;
+  border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 0.8rem; letter-spacing: 0.04em; cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+}
+.add-btn:hover { opacity: 0.85; }
+.add-btn:active { transform: scale(0.99); }
+
+/* INGREDIENT TABLE */
+.table-wrap { overflow-x: auto; }
+.ing-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 460px; }
+.ing-table thead tr { border-bottom: 1px solid var(--border2); }
+.ing-table th {
+  text-align: left; padding: 8px 10px; font-size: 0.58rem;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 400;
+}
+.ing-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.ing-table tbody tr { transition: background 0.1s; animation: rowIn 0.2s ease forwards; }
+.ing-table tbody tr:hover { background: var(--surface2); }
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ing-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.85rem; }
+.ing-sub { font-size: 0.65rem; color: var(--muted2); margin-top: 2px; }
+.mv { font-weight: 500; }
+.mv.p { color: var(--protein); }
+.mv.c { color: var(--carbs); }
+.mv.f { color: var(--fat); }
+.del-btn {
+  background: none; border: 1px solid transparent; color: var(--muted);
+  cursor: pointer; border-radius: 5px; padding: 4px 7px; font-size: 0.75rem; transition: all 0.12s;
+}
+.del-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 0.78rem; }
+.empty-state .ei { font-size: 2rem; margin-bottom: 8px; opacity: 0.35; }
+
+/* MEAL SUMMARY CARD */
+.meal-summary { position: sticky; top: 0; }
+.summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.sc-header {
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sc-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.88rem; }
+.per-badge {
+  font-size: 0.62rem; background: rgba(200,245,100,0.12);
+  color: var(--accent); border: 1px solid rgba(200,245,100,0.25);
+  border-radius: 20px; padding: 3px 9px;
+}
+.sc-body { padding: 16px 18px; }
+.kcal-big-wrap {
+  text-align: center; padding: 16px 0 14px;
+  border-bottom: 1px solid var(--border); margin-bottom: 16px;
+}
+.kcal-num {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.8rem;
+  line-height: 1; color: var(--accent); letter-spacing: -0.04em;
+}
+.kcal-lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-top: 4px; }
+.donut-wrap { display: flex; justify-content: center; margin: 12px 0 10px; }
+.donut-canvas { width: 110px; height: 110px; }
+.legend {
+  display: flex; gap: 10px; justify-content: center;
+  flex-wrap: wrap; font-size: 0.62rem; color: var(--muted2); margin-bottom: 14px;
+}
+.leg-item { display: flex; align-items: center; gap: 4px; }
+.leg-dot { width: 7px; height: 7px; border-radius: 50%; }
+.macro-rows { display: flex; flex-direction: column; gap: 10px; }
+.mr { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 8px; }
+.mr-dot { width: 8px; height: 8px; border-radius: 50%; }
+.mr-name { font-size: 0.68rem; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.06em; }
+.mr-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; }
+.mr-unit { font-size: 0.6rem; color: var(--muted); }
+.bar-row { grid-column: 2 / -1; }
+.bar-bg { height: 4px; background: var(--border2); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+.divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+/* DAILY VIEW */
+.daily-view { padding: 28px 32px; flex: 1; }
+.daily-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem; letter-spacing: -0.03em; margin-bottom: 4px; }
+.daily-title span { color: var(--accent); }
+
+.goals-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 22px; margin-bottom: 28px;
+}
+.goals-card-title {
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.goals-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 700px) { .goals-grid { grid-template-columns: repeat(2, 1fr); } }
+.goal-field { display: flex; flex-direction: column; gap: 4px; }
+.goal-field label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.goal-field input {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  padding: 8px 10px; color: var(--text); font-family: 'DM Mono', monospace;
+  font-size: 0.82rem; outline: none; transition: border-color 0.15s; -moz-appearance: textfield;
+}
+.goal-field input::-webkit-outer-spin-button,
+.goal-field input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.goal-field input:focus { border-color: var(--accent); }
+
+.daily-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 700px) { .daily-stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.stat-tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; position: relative;
+  overflow: hidden; transition: border-color 0.15s;
+}
+.stat-tile:hover { border-color: var(--border2); }
+.stat-tile-bg { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--border); }
+.stat-tile-progress {
+  position: absolute; bottom: 0; left: 0; height: 3px;
+  border-radius: 0 2px 2px 0; transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.stat-tile-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; }
+.stat-tile-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem; line-height: 1; letter-spacing: -0.03em; }
+.stat-tile-unit { font-size: 0.65rem; color: var(--muted2); margin-top: 2px; }
+.stat-tile-pct { font-size: 0.65rem; margin-top: 6px; font-weight: 600; }
+
+.radial-wrap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+@media (max-width: 700px) { .radial-wrap { grid-template-columns: repeat(2, 1fr); } }
+.radial-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.radial-canvas { width: 72px; height: 72px; }
+.radial-name { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); }
+.radial-pct { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+
+.meals-compare {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden; margin-bottom: 28px;
+}
+.mc-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem; }
+.mc-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.mc-table th {
+  text-align: left; padding: 10px 14px; font-size: 0.58rem;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 400;
+  border-bottom: 1px solid var(--border);
+}
+.mc-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.mc-table tbody tr:last-child td { border-bottom: none; }
+.mc-table tbody tr:hover { background: var(--surface2); cursor: pointer; }
+.mc-meal-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.88rem; }
+.mc-meal-portions { font-size: 0.65rem; color: var(--muted2); margin-top: 2px; }
+.mc-bar-cell { width: 120px; }
+.mc-mini-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.mc-mini-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.goal-row { background: rgba(200,245,100,0.04); }
+.goal-row td { border-top: 2px solid rgba(200,245,100,0.2); font-family: 'Syne', sans-serif; font-weight: 700; }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+  z-index: 500; display: flex; align-items: center; justify-content: center;
+  padding: 24px; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; backdrop-filter: blur(6px);
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border2); border-radius: 18px;
+  width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto;
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.modal-overlay.open .modal { transform: scale(1) translateY(0); }
+.modal-header {
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  position: sticky; top: 0; background: var(--surface); z-index: 10;
+}
+.modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em; }
+.modal-subtitle { font-size: 0.7rem; color: var(--muted2); margin-top: 3px; }
+.modal-close {
+  width: 30px; height: 30px; background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: 8px;
+  color: var(--muted2); cursor: pointer; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s; flex-shrink: 0;
+}
+.modal-close:hover { color: var(--text); border-color: var(--text); }
+.modal-body { padding: 20px 24px 24px; }
+.modal-macro-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 22px; }
+@media (max-width: 500px) { .modal-macro-grid { grid-template-columns: repeat(2, 1fr); } }
+.modal-macro-tile {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 10px; text-align: center;
+}
+.mmt-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px; }
+.mmt-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; }
+.mmt-unit { font-size: 0.6rem; color: var(--muted2); }
+.modal-goal-section { margin-bottom: 20px; }
+.modal-goal-title { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 12px; }
+.mgp-row { display: grid; grid-template-columns: 70px 1fr 60px; align-items: center; gap: 10px; margin-bottom: 10px; }
+.mgp-name { font-size: 0.68rem; color: var(--muted2); }
+.mgp-bar-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.mgp-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.mgp-pct { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.78rem; text-align: right; }
+.modal-ing-title { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 12px; }
+.modal-ing-row {
+  display: flex; align-items: center; padding: 9px 0;
+  border-bottom: 1px solid var(--border); gap: 10px; animation: rowIn 0.2s ease forwards;
+}
+.modal-ing-row:last-child { border-bottom: none; }
+.mir-name { flex: 1; }
+.mir-n { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.82rem; }
+.mir-g { font-size: 0.65rem; color: var(--muted2); }
+.mir-macros { display: flex; gap: 10px; font-size: 0.7rem; flex-wrap: wrap; }
+.mir-k { color: var(--kcal); }
+.mir-p { color: var(--protein); }
+.mir-c { color: var(--carbs); }
+.mir-f { color: var(--fat); }
+
+.no-meal-selected {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; color: var(--muted); gap: 12px;
+}
+.no-meal-selected .big-icon { font-size: 3rem; opacity: 0.3; }
+.no-meal-selected h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--muted2); }
+.no-meal-selected p { font-size: 0.75rem; max-width: 260px; text-align: center; }
+
+.over { color: var(--accent3) !important; }
+.under { color: var(--accent) !important; }
+
+/* EDIT ROW */
+.ing-edit-row td { background: var(--surface2); padding: 8px 6px !important; }
+.ing-edit-row input {
+  background: var(--bg); border: 1px solid var(--border2); border-radius: 6px;
+  padding: 6px 8px; color: var(--text); font-family: 'DM Mono', monospace;
+  font-size: 0.75rem; outline: none; width: 100%; -moz-appearance: textfield;
+  transition: border-color 0.15s;
+}
+.ing-edit-row input::-webkit-outer-spin-button,
+.ing-edit-row input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.ing-edit-row input:focus { border-color: var(--accent); }
+.edit-save-btn {
+  background: var(--accent); color: var(--bg); border: none; border-radius: 6px;
+  padding: 6px 12px; font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 0.72rem; cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
+}
+.edit-save-btn:hover { opacity: 0.85; }
+.edit-cancel-btn {
+  background: none; border: 1px solid var(--border2); border-radius: 6px;
+  color: var(--muted2); padding: 6px 10px; font-family: 'DM Mono', monospace;
+  font-size: 0.72rem; cursor: pointer; transition: all 0.12s; white-space: nowrap;
+}
+.edit-cancel-btn:hover { border-color: var(--muted2); color: var(--text); }
+.edit-btn {
+  background: none; border: 1px solid transparent; color: var(--muted);
+  cursor: pointer; border-radius: 5px; padding: 4px 7px; font-size: 0.72rem; transition: all 0.12s;
+}
+.edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* PRODUCT SEARCH */
+.search-row {
+  display: flex; gap: 8px; margin-bottom: 12px; align-items: stretch;
+}
+.search-input-wrap { flex: 1; position: relative; }
+.search-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 9px 12px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--muted); opacity: 0.6; }
+.search-btn {
+  padding: 9px 16px; background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace;
+  font-size: 0.78rem; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+}
+.search-btn:hover { border-color: var(--accent); color: var(--accent); }
+.search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.search-btn .spin { display: inline-block; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.search-results {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; overflow: hidden; margin-bottom: 12px;
+  animation: rowIn 0.18s ease;
+}
+.search-results-header {
+  padding: 8px 14px; font-size: 0.6rem; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--muted); border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.search-result-item {
+  padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border);
+  transition: background 0.12s; display: flex; justify-content: space-between;
+  align-items: center; gap: 12px;
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--surface3); }
+.sri-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.82rem; }
+.sri-brand { font-size: 0.65rem; color: var(--muted2); margin-top: 2px; }
+.sri-macros { display: flex; gap: 10px; font-size: 0.68rem; flex-shrink: 0; }
+.sri-k { color: var(--kcal); }
+.sri-p { color: var(--protein); }
+.sri-c { color: var(--carbs); }
+.sri-f { color: var(--fat); }
+.search-no-results { padding: 16px 14px; font-size: 0.75rem; color: var(--muted); text-align: center; }
+.search-dismiss { cursor: pointer; color: var(--muted2); font-size: 0.8rem; padding: 2px 4px; border-radius: 4px; }
+.search-dismiss:hover { color: var(--text); }
+.header-actions { display: flex; gap: 6px; align-items: center; }
+.hdr-btn {
+  padding: 6px 13px; border-radius: 8px; font-family: 'DM Mono', monospace;
+  font-size: 0.68rem; cursor: pointer; border: 1px solid var(--border2);
+  color: var(--muted2); background: var(--surface2); transition: all 0.15s;
+  letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+}
+.hdr-btn:hover { color: var(--text); border-color: var(--muted2); }
+.hdr-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+.hdr-btn.primary:hover { opacity: 0.85; }
+
+/* LOAD feedback toast */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 10px 20px; font-size: 0.78rem; color: var(--text); z-index: 9999;
+  opacity: 0; transition: all 0.25s; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* BARCODE SCANNER */
+.scanner-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+  z-index: 600; display: flex; align-items: center; justify-content: center;
+  padding: 24px; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; backdrop-filter: blur(8px);
+}
+.scanner-overlay.open { opacity: 1; pointer-events: all; }
+
+.scanner-box {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 18px; width: 100%; max-width: 500px;
+  overflow: hidden;
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.scanner-overlay.open .scanner-box { transform: scale(1) translateY(0); }
+
+.scanner-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.scanner-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+.scanner-close {
+  width: 30px; height: 30px; background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: 8px;
+  color: var(--muted2); cursor: pointer; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+}
+.scanner-close:hover { color: var(--text); border-color: var(--text); }
+
+.scanner-viewport {
+  position: relative; background: #000; width: 100%; aspect-ratio: 4/3;
+  overflow: hidden;
+}
+#scannerVideo {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.scanner-aim {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.scanner-aim-inner {
+  width: 72%; height: 38%;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 0 0 2000px rgba(0,0,0,0.45);
+  position: relative;
+}
+.scanner-aim-inner::before, .scanner-aim-inner::after {
+  content: ''; position: absolute; width: 24px; height: 24px;
+  border-color: var(--accent); border-style: solid;
+}
+.scanner-aim-inner::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+.scanner-aim-inner::after  { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+
+.scanner-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scanline 2s ease-in-out infinite;
+  top: 0;
+}
+@keyframes scanline {
+  0%   { top: 8%; opacity: 1; }
+  50%  { top: 88%; opacity: 1; }
+  100% { top: 8%; opacity: 1; }
+}
+
+.scanner-status {
+  padding: 12px 20px; font-size: 0.75rem; color: var(--muted2);
+  border-bottom: 1px solid var(--border); min-height: 44px;
+  display: flex; align-items: center; gap: 8px;
+}
+.scanner-status.detected { color: var(--accent); }
+.scanner-status.error    { color: var(--accent3); }
+
+.scanner-result {
+  padding: 16px 20px; display: none;
+}
+.scanner-result.show { display: block; }
+.scanner-result-name {
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; margin-bottom: 4px;
+}
+.scanner-result-brand { font-size: 0.72rem; color: var(--muted2); margin-bottom: 12px; }
+.scanner-result-macros {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;
+}
+.srm-tile {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 8px; text-align: center;
+}
+.srm-label { font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 3px; }
+.srm-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+.scanner-use-btn {
+  width: 100%; padding: 11px; background: var(--accent); color: var(--bg); border: none;
+  border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 0.85rem; cursor: pointer; transition: opacity 0.15s;
+}
+.scanner-use-btn:hover { opacity: 0.85; }
+.scanner-scan-again {
+  width: 100%; margin-top: 8px; padding: 9px; background: none;
+  border: 1px solid var(--border2); border-radius: 8px; color: var(--muted2);
+  font-family: 'DM Mono', monospace; font-size: 0.75rem; cursor: pointer; transition: all 0.15s;
+}
+.scanner-scan-again:hover { border-color: var(--text); color: var(--text); }
+
+@media (max-width: 960px) {
+  .meal-editor { grid-template-columns: 1fr; }
+  .sidebar { width: 220px; }
+}
+@media (max-width: 700px) {
+  .app { flex-direction: column; height: auto; }
+  .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  .meal-list { display: flex; flex-direction: row; overflow-x: auto; padding: 8px; gap: 6px; }
+  .meal-item { margin-bottom: 0; flex-shrink: 0; min-width: 140px; }
+  .content { height: auto; overflow-y: visible; }
+  header { padding: 0 16px; }
+  .meal-editor { padding: 16px; }
+  .daily-view { padding: 16px; }
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <nav class="quick-actions">
-                <button id="toggleStatsBtn">📊 Show Stats</button>
-                <button id="toggleSettingsBtn" onclick="openModal('settingsModal')">⚙️ Settings</button>
-                <button id="themeToggle">🌓 Toggle Theme</button>
-            </nav>
-            <h1>Japanese SRS Quiz Trainer</h1>
-            <p id="startNote">Please load deck to start using SRS Quiz Trainer!</p>
 
-            <section class="controls-group" aria-label="Deck Controls">
-                <div class="controls">
-                    <button onclick="openModal('customDeckModal')">📁 Load Custom Deck</button>
-                    <button onclick="openModal('defaultDeckModal')">📂 Load Default Deck</button>
-                </div>
-            </section>
+<header>
+  <div class="logo">meal<span>box</span>.macro</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('editor')">Meals</button>
+    <button class="nav-tab" onclick="switchView('daily')">Daily Overview</button>
+  </div>
+  <div class="header-actions">
+    <button class="hdr-btn" onclick="loadPlan()">📂 Load</button>
+    <button class="hdr-btn primary" onclick="savePlan()">💾 Save</button>
+  </div>
+  <input type="file" id="fileInput" accept=".txt" style="display:none" onchange="onFileLoad(event)">
+</header>
+<div class="toast" id="toast"></div>
 
-            <section class="controls-group" aria-label="Options">
-                <div class="controls">
-                    <label>
-                        Quiz Mode:
-                        <select id="quizMode">
-                            <option value="random">🎲 Random</option>
-                            <option value="1">EN → Kanji</option>
-                            <option value="2">Kanji → Reading</option>
-                            <option value="3">Kanji → English</option>
-                            <option value="4">Sentence → Translation</option>
-                        </select>
-                    </label>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">Meal Plan</div>
+      <button class="add-meal-btn" onclick="createMeal()" title="New meal">+</button>
+    </div>
+    <div class="meal-list" id="mealList"></div>
+  </div>
 
-                    <label id="directionLabel" class="hidden">
-                        Direction:
-                        <select id="direction">
-                            <option value="jp-en">JP → EN</option>
-                            <option value="en-jp">EN → JP</option>
-                        </select>
-                    </label>
-                    <div class="controls">
-                        <label><input type="checkbox" id="showHints"> Show Hints</label>
-                        <label><input type="checkbox" id="showExample"> Show Example</label>
-                    </div>
-                </div>
-            </section>
-        </header>
-
-        <main>
-            <aside id="statsPanel" class="hidden stats-box" aria-live="polite">
-                <h3>📈 Session Statistics</h3>
-                <ul>
-                    <li>EN → Kanji: <span id="mode1Count">0</span>/<span id="mode1Max">10</span> (R: <span id="mode1ReviewCount">0</span>/<span id="mode1ReviewMax">100</span>)</li>
-                    <li>Kanji → Reading: <span id="mode2Count">0</span>/<span id="mode2Max">10</span> (R: <span id="mode2ReviewCount">0</span>/<span id="mode2ReviewMax">100</span>)</li>
-                    <li>Kanji → English: <span id="mode3Count">0</span>/<span id="mode3Max">10</span> (R: <span id="mode3ReviewCount">0</span>/<span id="mode3ReviewMax">100</span>)</li>
-                    <li>Sentence → Translation: <span id="mode4Count">0</span>/<span id="mode4Max">10</span> (R: <span id="mode4ReviewCount">0</span>/<span id="mode4ReviewMax">100</span>)</li>
-                </ul>
-                <p>📝 Done Cards: <span id="doneCount">0</span></p>
-                <p>⏳ Cards Due: <span id="dueCount">0</span></p>
-                <p>Total new remaining in deck: <span id="newLeftCount">...</span></p>
-            </aside>
-
-            <section id="quizSection" class="hidden" aria-label="Quiz Section">
-                <p id="todayDisplay">📅 Today's Date: <span id="todayDate"></span></p>
-                <div id="question" class="question-box"></div>
-                <div id="choices" class="choices-container"></div>
-                <div id="hints" class="hidden hint-box"></div>
-                <div id="example" class="hidden example-box"></div>
-                <button id="nextBtn" class="hidden">Next</button>
-            </section>
-        </main>
+  <div class="content">
+    <div class="view active" id="view-editor">
+      <div id="editorContent"></div>
     </div>
 
-    <!-- Modals -->
-    <div id="fieldMapperModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="fieldMapperTitle">
-        <div class="modal-content">
-            <h3 id="fieldMapperTitle">🧩 Map Your Fields</h3>
-            <p>Select which column corresponds to each field.</p>
-            <table id="sampleDataTable"></table>
-            <div id="mappingControls"></div>
-            <button onclick="confirmFieldMapping()">✔ Confirm Mapping</button>
+    <div class="view" id="view-daily">
+      <div class="daily-view">
+        <div style="margin-bottom:28px">
+          <div class="daily-title">Daily <span>Overview</span></div>
+          <div style="font-size:0.72rem;color:var(--muted2);margin-top:4px">All meals combined vs. your nutrition goals</div>
         </div>
-    </div>
 
-    <div id="customDeckModal" class="modal hidden" role="dialog" aria-modal="true">
-        <div class="modal-content">
-            <h3>📁 Upload Custom Deck</h3>
-            <input type="file" id="csvFile" accept=".csv,.txt" />
-            <button onclick="closeModal('customDeckModal')">Cancel</button>
+        <div class="section-label">Your Daily Goals</div>
+        <div class="goals-card">
+          <div class="goals-card-title">🎯 Set Targets</div>
+          <div class="goals-grid">
+            <div class="goal-field"><label>Kcal goal</label><input type="number" id="g-kcal" value="2000" oninput="updateDaily()"></div>
+            <div class="goal-field"><label>Protein (g)</label><input type="number" id="g-protein" value="150" oninput="updateDaily()"></div>
+            <div class="goal-field"><label>Carbs (g)</label><input type="number" id="g-carbs" value="250" oninput="updateDaily()"></div>
+            <div class="goal-field"><label>Fat (g)</label><input type="number" id="g-fat" value="65" oninput="updateDaily()"></div>
+          </div>
         </div>
-    </div>
 
-    <div id="defaultDeckModal" class="modal hidden" role="dialog" aria-modal="true">
-        <div class="modal-content">
-            <h3>📂 Select Default Deck</h3>
-            <select id="deckSelector">
-                <option value="ALL">All</option>
-                <option value="N5">N5</option>
-                <option value="N4">N4</option>
-                <option value="N3">N3</option>
-                <option value="N2">N2</option>
-                <option value="N1">N1</option>
-            </select>
-            <button id="loadDefaultBtn">✔ Load Deck</button>
-            <button onclick="closeModal('defaultDeckModal')">Cancel</button>
+        <div class="section-label">Today's Totals</div>
+        <div class="daily-stats-grid" id="statTiles"></div>
+
+        <div class="section-label">Goal Progress</div>
+        <div class="radial-wrap" id="radialWrap"></div>
+
+        <div class="section-label">Meal Breakdown</div>
+        <div class="meals-compare">
+          <div class="mc-header">All Meals — per portion · click a row to inspect</div>
+          <div style="overflow-x:auto">
+            <table class="mc-table">
+              <thead>
+                <tr>
+                  <th>Meal</th>
+                  <th>Kcal</th>
+                  <th style="color:var(--protein)">Protein</th>
+                  <th style="color:var(--carbs)">Carbs</th>
+                  <th style="color:var(--fat)">Fat</th>
+                  <th style="width:120px">Kcal share</th>
+                </tr>
+              </thead>
+              <tbody id="mealsTableBody"></tbody>
+            </table>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
+</div>
 
-    <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true">
-        <div class="modal-content" role="region" aria-label="Settings">
-            <h3>⚙️ Settings</h3>
-            <!-- Debug Settings Section -->
-            <section class="settings-section">
-                <h4>🔍 Debug Settings</h4>
-                <button id="printReviews"> log reviews </button>
-                <label>
-                    <input type="checkbox" id="debugToggle" />
-                    Enable Debug Mode
-                </label>
-                <div id="debugOptions" class="hidden">
-                    <label>
-                        Debug Date:
-                        <input type="date" id="debugDateInput" />
-                    </label>
-                    <label>
-                        <input type="checkbox" id="useDebugDate" />
-                        Use Debug Date
-                    </label>
-                </div>
-            </section>
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Meal Detail</div>
+        <div class="modal-subtitle" id="modalSubtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
 
-            <!-- Card Limit Settings Section -->
-            <section class="settings-section">
-                <h4>🧮 Card Limits</h4>
-                <label>
-                    Max New Cards per Mode:
-                    <input type="number" id="maxNewInput" min="0" value="10" />
-                </label>
-                <label>
-                    Max Review Cards per Mode:
-                    <input type="number" id="maxReviewInput" min="0" value="100" />
-                </label>
-            </section>
+<!-- BARCODE SCANNER MODAL -->
+<div class="scanner-overlay" id="scannerOverlay">
+  <div class="scanner-box">
+    <div class="scanner-header">
+      <div class="scanner-title">📷 Scan Barcode</div>
+      <button class="scanner-close" onclick="closeScanner()">✕</button>
+    </div>
+    <div class="scanner-viewport">
+      <video id="scannerVideo" autoplay muted playsinline></video>
+      <div class="scanner-aim">
+        <div class="scanner-aim-inner">
+          <div class="scanner-line"></div>
+        </div>
+      </div>
+    </div>
+    <div class="scanner-status" id="scannerStatus">Point camera at a product barcode…</div>
+    <div class="scanner-result" id="scannerResult">
+      <div class="scanner-result-name" id="srName"></div>
+      <div class="scanner-result-brand" id="srBrand"></div>
+      <div class="scanner-result-macros" id="srMacros"></div>
+      <button class="scanner-use-btn" onclick="useScanResult()">+ Use This Product</button>
+      <button class="scanner-scan-again" onclick="resetScanner()">↩ Scan another</button>
+    </div>
+  </div>
+</div>
 
-            <!-- Action Buttons -->
-            <div class="modal-actions">
-                <button id="applyLimitsBtn">✅ Apply</button>
-                <button onclick="closeModal('settingsModal')">❌ Cancel</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.20.0/zxing.min.js" crossorigin="anonymous"></script>
+<script>
+// ===== STATE =====
+let meals = [];
+let activeMealId = null;
+let activeView = 'editor';
+let nextId = 1;
+// input mode per meal: 'direct' or 'per100'
+let inputMode = 'per100';
+
+const COLORS = { protein: '#7eb8f7', carbs: '#ffd080', fat: '#f0908e', kcal: '#c8f564' };
+
+const STORAGE_KEY = 'mealbox_plan_v1';
+
+// ===== AUTO SAVE =====
+function autoSave() {
+  try {
+    const goals = getGoals();
+    const data = { version: 1, goals, meals, activeMealId, inputMode };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e) {
+    // localStorage unavailable (private mode, full, etc.) — silent fail
+  }
+}
+
+function autoLoad() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data.meals || !Array.isArray(data.meals)) return false;
+
+    meals = data.meals;
+    nextId = Math.max(0, ...meals.flatMap(m => [m.id, ...m.ingredients.map(i => i.id)])) + 1;
+    activeMealId = data.activeMealId ?? (meals.length ? meals[0].id : null);
+    if (data.inputMode) inputMode = data.inputMode;
+
+    // Restore goals after DOM is ready
+    if (data.goals) {
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+      setVal('g-kcal',    data.goals.kcal);
+      setVal('g-protein', data.goals.protein);
+      setVal('g-carbs',   data.goals.carbs);
+      setVal('g-fat',     data.goals.fat);
+    }
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+// ===== INIT =====
+function init() {
+  const restored = autoLoad();
+  if (!restored) {
+    // Fresh start — create default meals
+    createMeal('Breakfast');
+    createMeal('Lunch');
+    createMeal('Dinner');
+    activeMealId = meals[0].id;
+  }
+  renderSidebar();
+  renderEditor();
+  if (restored) showToast('↩ Meal plan restored from last session');
+}
+
+// ===== MEAL MANAGEMENT =====
+function createMeal(name) {
+  const meal = { id: nextId++, name: name || 'Meal ' + nextId, portions: 1, ingredients: [] };
+  meals.push(meal);
+  activeMealId = meal.id;
+  renderSidebar();
+  renderEditor();
+  updateDaily();
+  autoSave();
+}
+
+function deleteMeal(id, e) {
+  e && e.stopPropagation();
+  meals = meals.filter(m => m.id !== id);
+  if (activeMealId === id) activeMealId = meals.length ? meals[meals.length - 1].id : null;
+  renderSidebar();
+  renderEditor();
+  updateDaily();
+  autoSave();
+}
+
+function selectMeal(id) {
+  editingIngId = null;
+  activeMealId = id;
+  renderSidebar();
+  renderEditor();
+  autoSave();
+}
+
+function getMeal(id) { return meals.find(m => m.id === id); }
+function getActive() { return getMeal(activeMealId); }
+
+// ===== SIDEBAR =====
+function renderSidebar() {
+  const list = document.getElementById('mealList');
+  if (meals.length === 0) {
+    list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.72rem">No meals yet</div>`;
+    return;
+  }
+  list.innerHTML = meals.map(m => {
+    const pm = perMealTotals(m);
+    return `
+      <div class="meal-item${m.id === activeMealId ? ' active' : ''}" onclick="selectMeal(${m.id})">
+        <div class="meal-item-name">
+          ${esc(m.name)}<span class="meal-kcal-badge">${fmt(pm.kcal)} kcal</span>
+        </div>
+        <div class="meal-item-stats">
+          <span>×${m.portions}</span>
+          <span style="color:var(--protein)">${fmt(pm.protein)}g P</span>
+          <span style="color:var(--carbs)">${fmt(pm.carbs)}g C</span>
+          <span style="color:var(--fat)">${fmt(pm.fat)}g F</span>
+        </div>
+        <div class="meal-item-actions">
+          <button class="icon-btn" onclick="deleteMeal(${m.id}, event)" title="Delete">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===== EDITOR =====
+function renderEditor() {
+  const container = document.getElementById('editorContent');
+  const meal = getActive();
+  if (!meal) {
+    container.innerHTML = `
+      <div class="no-meal-selected">
+        <div class="big-icon">🍽️</div>
+        <h3>No meal selected</h3>
+        <p>Create a meal using the + button in the sidebar.</p>
+      </div>`;
+    return;
+  }
+
+  const isPer100 = inputMode === 'per100';
+
+  container.innerHTML = `
+    <div class="meal-editor">
+      <div class="left-col">
+        <div class="meal-name-row">
+          <input class="meal-name-input" value="${esc(meal.name)}"
+            oninput="updateMealName(${meal.id}, this.value)" placeholder="Meal name">
+          <div class="meal-portion-wrap">
+            <span>÷</span>
+            <input type="number" class="portion-input" value="${meal.portions}" min="1" max="99"
+              oninput="updatePortions(${meal.id}, this.value)" title="Split into this many portions">
+            <span>portions</span>
+          </div>
+        </div>
+
+        <div class="section-label">Add Ingredient</div>
+        <div class="add-card">
+          <div class="add-card-header">
+            <div class="add-card-title">New Ingredient</div>
+            <div class="mode-toggle">
+              <button class="mode-btn${!isPer100 ? ' active' : ''}" onclick="setMode('direct')">Direct</button>
+              <button class="mode-btn${isPer100 ? ' active' : ''}" onclick="setMode('per100')">Per 100g</button>
             </div>
+          </div>
+
+          <div class="search-row">
+            <div class="search-input-wrap">
+              <input class="search-input" id="f-search" placeholder="🔍  Search by name or brand (e.g. ICA Kycklingfilé)…"
+                onkeydown="if(event.key==='Enter') searchProduct()">
+            </div>
+            <button class="search-btn" id="searchBtn" onclick="searchProduct()">Search</button>
+            <button class="search-btn" onclick="openScanner()" title="Scan barcode" style="padding:9px 13px">📷</button>
+          </div>
+          <div id="searchResults"></div>
+
+          ${isPer100 ? `
+          <div class="hint-box">
+            Enter macros <strong>per 100g</strong>, then set the actual <strong>total weight</strong>.
+            Values will be scaled automatically. e.g. Chicken: 1000g · 165 kcal · 31g protein · 0g carbs · 3.6g fat per 100g
+          </div>` : ''}
+
+          <div id="livePreview" class="live-preview">
+            <span class="lp-empty">Fill in the fields to see a live preview…</span>
+          </div>
+
+          ${isPer100 ? `
+          <div class="form-row form-row-per100">
+            <div class="field span2">
+              <label>Ingredient name</label>
+              <input type="text" id="f-name" placeholder="e.g. Chicken breast" autocomplete="off" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Total weight (g)</label>
+              <input type="number" id="f-grams" placeholder="1000" min="0" class="highlight" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Kcal /100g</label>
+              <input type="number" id="f-kcal100" placeholder="165" min="0" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Protein /100g</label>
+              <input type="number" id="f-protein100" placeholder="31" min="0" step="0.1" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Carbs /100g</label>
+              <input type="number" id="f-carbs100" placeholder="0" min="0" step="0.1" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Fat /100g</label>
+              <input type="number" id="f-fat100" placeholder="3.6" min="0" step="0.1" oninput="updatePreview()">
+            </div>
+          </div>` : `
+          <div class="form-row form-row-main">
+            <div class="field span2">
+              <label>Ingredient name</label>
+              <input type="text" id="f-name" placeholder="e.g. Chicken breast" autocomplete="off" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Weight (g)</label>
+              <input type="number" id="f-grams" placeholder="100" min="0" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Kcal total</label>
+              <input type="number" id="f-kcal" placeholder="0" min="0" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Protein (g)</label>
+              <input type="number" id="f-protein" placeholder="0" min="0" step="0.1" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Carbs (g)</label>
+              <input type="number" id="f-carbs" placeholder="0" min="0" step="0.1" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Fat (g)</label>
+              <input type="number" id="f-fat" placeholder="0" min="0" step="0.1" oninput="updatePreview()">
+            </div>
+          </div>`}
+
+          <button class="add-btn" onclick="addIngredient(${meal.id})">+ Add to Meal</button>
         </div>
+
+        <div class="section-label">Ingredients (${meal.ingredients.length})</div>
+        ${renderIngTable(meal)}
+      </div>
+
+      <div class="meal-summary" id="mealSummary-${meal.id}">
+        ${renderMealSummaryCard(meal)}
+      </div>
+    </div>`;
+}
+
+function setMode(mode) {
+  inputMode = mode;
+  renderEditor();
+  const meal = getActive();
+  if (meal) setTimeout(() => drawDonut(meal), 0);
+}
+
+// ===== LIVE PREVIEW =====
+function updatePreview() {
+  const el = document.getElementById('livePreview');
+  if (!el) return;
+
+  const isPer100 = inputMode === 'per100';
+  const grams = parseFloat(document.getElementById('f-grams')?.value) || 0;
+  const name  = document.getElementById('f-name')?.value.trim() || '';
+
+  let kcal, protein, carbs, fat;
+
+  if (isPer100) {
+    const k100  = parseFloat(document.getElementById('f-kcal100')?.value) || 0;
+    const p100  = parseFloat(document.getElementById('f-protein100')?.value) || 0;
+    const c100  = parseFloat(document.getElementById('f-carbs100')?.value) || 0;
+    const f100  = parseFloat(document.getElementById('f-fat100')?.value) || 0;
+    const scale = grams / 100;
+    kcal    = k100 * scale;
+    protein = p100 * scale;
+    carbs   = c100 * scale;
+    fat     = f100 * scale;
+  } else {
+    kcal    = parseFloat(document.getElementById('f-kcal')?.value) || 0;
+    protein = parseFloat(document.getElementById('f-protein')?.value) || 0;
+    carbs   = parseFloat(document.getElementById('f-carbs')?.value) || 0;
+    fat     = parseFloat(document.getElementById('f-fat')?.value) || 0;
+  }
+
+  const hasData = grams > 0 || kcal > 0 || protein > 0 || carbs > 0 || fat > 0;
+  if (!hasData) {
+    el.innerHTML = `<span class="lp-empty">Fill in the fields to see a live preview…</span>`;
+    return;
+  }
+
+  const meal = getActive();
+  const portions = meal ? meal.portions : 1;
+  const perP_kcal = kcal / portions;
+  const perP_p    = protein / portions;
+  const perP_c    = carbs / portions;
+  const perP_f    = fat / portions;
+
+  el.innerHTML = `
+    <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--text);margin-right:6px">${name || 'Preview'}</span>
+    <span style="color:var(--muted2);font-size:0.65rem;margin-right:12px">${grams}g total</span>
+    <span><span class="lp-label">Kcal</span><span class="lp-val" style="color:var(--kcal)">${fmt(kcal)}</span></span>
+    <span><span class="lp-label">P</span><span class="lp-val" style="color:var(--protein)">${fmt(protein)}g</span></span>
+    <span><span class="lp-label">C</span><span class="lp-val" style="color:var(--carbs)">${fmt(carbs)}g</span></span>
+    <span><span class="lp-label">F</span><span class="lp-val" style="color:var(--fat)">${fmt(fat)}g</span></span>
+    ${portions > 1 ? `
+      <span style="border-left:1px solid var(--border2);margin-left:4px;padding-left:12px;color:var(--muted);font-size:0.65rem">
+        Per portion: <span style="color:var(--kcal)">${fmt(perP_kcal)} kcal</span>
+        · <span style="color:var(--protein)">${fmt(perP_p)}g P</span>
+        · <span style="color:var(--carbs)">${fmt(perP_c)}g C</span>
+        · <span style="color:var(--fat)">${fmt(perP_f)}g F</span>
+      </span>` : ''}
+  `;
+}
+
+// ===== ADD INGREDIENT =====
+function addIngredient(mealId) {
+  const meal = getMeal(mealId);
+  if (!meal) return;
+  const name  = document.getElementById('f-name')?.value.trim();
+  const grams = parseFloat(document.getElementById('f-grams')?.value) || 0;
+  if (!name) { document.getElementById('f-name')?.focus(); return; }
+
+  let kcal, protein, carbs, fat;
+  const isPer100 = inputMode === 'per100';
+
+  if (isPer100) {
+    const scale = grams / 100;
+    const kcal100    = parseFloat(document.getElementById('f-kcal100')?.value) || 0;
+    const protein100 = parseFloat(document.getElementById('f-protein100')?.value) || 0;
+    const carbs100   = parseFloat(document.getElementById('f-carbs100')?.value) || 0;
+    const fat100     = parseFloat(document.getElementById('f-fat100')?.value) || 0;
+    kcal    = kcal100 * scale;
+    protein = protein100 * scale;
+    carbs   = carbs100 * scale;
+    fat     = fat100 * scale;
+    meal.ingredients.push({ id: nextId++, name, grams, kcal, protein, carbs, fat,
+      per100: true, kcal100, protein100, carbs100, fat100 });
+  } else {
+    kcal    = parseFloat(document.getElementById('f-kcal')?.value) || 0;
+    protein = parseFloat(document.getElementById('f-protein')?.value) || 0;
+    carbs   = parseFloat(document.getElementById('f-carbs')?.value) || 0;
+    fat     = parseFloat(document.getElementById('f-fat')?.value) || 0;
+    meal.ingredients.push({ id: nextId++, name, grams, kcal, protein, carbs, fat, per100: false });
+  }
+  renderEditor();
+  renderSidebar();
+  updateDaily();
+  autoSave();
+  setTimeout(() => drawDonut(meal), 0);
+}
+
+function removeIngredient(mealId, ingId) {
+  const meal = getMeal(mealId);
+  if (!meal) return;
+  meal.ingredients = meal.ingredients.filter(i => i.id !== ingId);
+  renderEditor();
+  renderSidebar();
+  updateDaily();
+  autoSave();
+  setTimeout(() => drawDonut(meal), 0);
+}
+
+function updateMealName(mealId, val) {
+  const meal = getMeal(mealId);
+  if (meal) meal.name = val;
+  renderSidebar();
+  if (activeView === 'daily') updateDaily();
+  autoSave();
+}
+
+function updatePortions(mealId, val) {
+  const meal = getMeal(mealId);
+  if (!meal) return;
+  meal.portions = Math.max(1, parseInt(val) || 1);
+  renderSidebar();
+  updateDaily();
+  autoSave();
+  const wrap = document.getElementById('mealSummary-' + mealId);
+  if (wrap) { wrap.innerHTML = renderMealSummaryCard(meal); setTimeout(() => drawDonut(meal), 0); }
+}
+
+// ===== INGREDIENT TABLE =====
+let editingIngId = null; // track which ingredient is being edited
+
+function renderIngTable(meal) {
+  if (meal.ingredients.length === 0) {
+    return `<div class="empty-state"><div class="ei">🥦</div>No ingredients yet.</div>`;
+  }
+  const rows = meal.ingredients.map(i => {
+    if (i.id === editingIngId) {
+      if (i.per100) {
+        // Show original per-100g inputs + weight, with live-recalc preview
+        return `
+          <tr class="ing-edit-row">
+            <td colspan="7" style="padding:12px 10px !important">
+              <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:10px">
+                Editing per 100g values
+              </div>
+              <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Name</span>
+                  <input id="ei-name" value="${esc(i.name)}" placeholder="Name" style="min-width:80px">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Total weight (g)</span>
+                  <input id="ei-grams" type="number" value="${i.grams}" placeholder="g" oninput="refreshEditPreview()">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Kcal /100g</span>
+                  <input id="ei-kcal100" type="number" value="${i.kcal100 ?? fmt(i.kcal / i.grams * 100)}" placeholder="kcal" oninput="refreshEditPreview()">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Protein /100g</span>
+                  <input id="ei-protein100" type="number" value="${i.protein100 ?? fmt(i.protein / i.grams * 100)}" placeholder="g" oninput="refreshEditPreview()">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Carbs /100g</span>
+                  <input id="ei-carbs100" type="number" value="${i.carbs100 ?? fmt(i.carbs / i.grams * 100)}" placeholder="g" oninput="refreshEditPreview()">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Fat /100g</span>
+                  <input id="ei-fat100" type="number" value="${i.fat100 ?? fmt(i.fat / i.grams * 100)}" placeholder="g" oninput="refreshEditPreview()">
+                </div>
+              </div>
+              <div id="editPreview" class="live-preview" style="margin-bottom:10px">
+                <span class="lp-empty">Adjust values to preview…</span>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="edit-save-btn" onclick="saveEdit(${meal.id}, ${i.id})">✓ Save</button>
+                <button class="edit-cancel-btn" onclick="cancelEdit(${meal.id})">Cancel</button>
+              </div>
+            </td>
+          </tr>`;
+      } else {
+        // Direct total entry
+        return `
+          <tr class="ing-edit-row">
+            <td colspan="7" style="padding:12px 10px !important">
+              <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:10px">
+                Editing total values
+              </div>
+              <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Name</span>
+                  <input id="ei-name" value="${esc(i.name)}" placeholder="Name" style="min-width:80px">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Weight (g)</span>
+                  <input id="ei-grams" type="number" value="${i.grams}" placeholder="g">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Kcal total</span>
+                  <input id="ei-kcal" type="number" value="${fmt(i.kcal)}" placeholder="kcal">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Protein (g)</span>
+                  <input id="ei-protein" type="number" value="${fmt(i.protein)}" placeholder="g">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Carbs (g)</span>
+                  <input id="ei-carbs" type="number" value="${fmt(i.carbs)}" placeholder="g">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Fat (g)</span>
+                  <input id="ei-fat" type="number" value="${fmt(i.fat)}" placeholder="g">
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="edit-save-btn" onclick="saveEdit(${meal.id}, ${i.id})">✓ Save</button>
+                <button class="edit-cancel-btn" onclick="cancelEdit(${meal.id})">Cancel</button>
+              </div>
+            </td>
+          </tr>`;
+      }
+    }
+    const perP_kcal = i.kcal / meal.portions;
+    const perP_p    = i.protein / meal.portions;
+    return `
+      <tr>
+        <td>
+          <div class="ing-name">${esc(i.name)}</div>
+          <div class="ing-sub">${i.grams}g total${i.per100 ? ' · per 100g' : ''}</div>
+        </td>
+        <td style="color:var(--kcal);font-family:'Syne',sans-serif;font-weight:700">${fmt(i.kcal)}</td>
+        <td><span class="mv p">${fmt(i.protein)}g</span></td>
+        <td><span class="mv c">${fmt(i.carbs)}g</span></td>
+        <td><span class="mv f">${fmt(i.fat)}g</span></td>
+        ${meal.portions > 1 ? `
+        <td style="color:var(--muted2);font-size:0.7rem">
+          <div>${fmt(perP_kcal)} kcal</div>
+          <div style="color:var(--protein)">${fmt(perP_p)}g P</div>
+        </td>` : '<td></td>'}
+        <td style="white-space:nowrap">
+          <button class="edit-btn" onclick="startEdit(${meal.id}, ${i.id})" title="Edit">✎</button>
+          <button class="del-btn" onclick="removeIngredient(${meal.id}, ${i.id})" title="Delete">✕</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const showPortionCol = meal.portions > 1;
+  return `
+    <div class="table-wrap">
+      <table class="ing-table">
+        <thead><tr>
+          <th>Ingredient</th>
+          <th style="color:var(--kcal)">Kcal</th>
+          <th style="color:var(--protein)">Protein</th>
+          <th style="color:var(--carbs)">Carbs</th>
+          <th style="color:var(--fat)">Fat</th>
+          <th>${showPortionCol ? 'Per portion' : ''}</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function startEdit(mealId, ingId) {
+  editingIngId = ingId;
+  renderEditor();
+  setTimeout(() => {
+    document.getElementById('ei-name')?.focus();
+    refreshEditPreview();
+  }, 0);
+}
+
+function cancelEdit(mealId) {
+  editingIngId = null;
+  renderEditor();
+}
+
+function refreshEditPreview() {
+  const el = document.getElementById('editPreview');
+  if (!el) return;
+  const grams    = parseFloat(document.getElementById('ei-grams')?.value) || 0;
+  const kcal100  = parseFloat(document.getElementById('ei-kcal100')?.value) || 0;
+  const p100     = parseFloat(document.getElementById('ei-protein100')?.value) || 0;
+  const c100     = parseFloat(document.getElementById('ei-carbs100')?.value) || 0;
+  const f100     = parseFloat(document.getElementById('ei-fat100')?.value) || 0;
+  const scale    = grams / 100;
+  const kcal     = kcal100 * scale;
+  const protein  = p100 * scale;
+  const carbs    = c100 * scale;
+  const fat      = f100 * scale;
+  const meal     = getActive();
+  const portions = meal ? meal.portions : 1;
+
+  if (grams === 0 && kcal100 === 0) {
+    el.innerHTML = `<span class="lp-empty">Adjust values to preview…</span>`;
+    return;
+  }
+  el.innerHTML = `
+    <span style="color:var(--muted2);font-size:0.65rem;margin-right:12px">${grams}g total</span>
+    <span><span class="lp-label">Kcal</span><span class="lp-val" style="color:var(--kcal)">${fmt(kcal)}</span></span>
+    <span><span class="lp-label">P</span><span class="lp-val" style="color:var(--protein)">${fmt(protein)}g</span></span>
+    <span><span class="lp-label">C</span><span class="lp-val" style="color:var(--carbs)">${fmt(carbs)}g</span></span>
+    <span><span class="lp-label">F</span><span class="lp-val" style="color:var(--fat)">${fmt(fat)}g</span></span>
+    ${portions > 1 ? `<span style="border-left:1px solid var(--border2);margin-left:4px;padding-left:12px;color:var(--muted);font-size:0.65rem">
+      Per portion: <span style="color:var(--kcal)">${fmt(kcal/portions)} kcal</span>
+      · <span style="color:var(--protein)">${fmt(protein/portions)}g P</span>
+      · <span style="color:var(--carbs)">${fmt(carbs/portions)}g C</span>
+      · <span style="color:var(--fat)">${fmt(fat/portions)}g F</span>
+    </span>` : ''}`;
+}
+
+function saveEdit(mealId, ingId) {
+  const meal = getMeal(mealId);
+  if (!meal) return;
+  const ing = meal.ingredients.find(i => i.id === ingId);
+  if (!ing) return;
+
+  const name = document.getElementById('ei-name')?.value.trim();
+  if (!name) { document.getElementById('ei-name')?.focus(); return; }
+
+  const grams = parseFloat(document.getElementById('ei-grams')?.value) || 0;
+  ing.name  = name;
+  ing.grams = grams;
+
+  if (ing.per100) {
+    const kcal100    = parseFloat(document.getElementById('ei-kcal100')?.value) || 0;
+    const protein100 = parseFloat(document.getElementById('ei-protein100')?.value) || 0;
+    const carbs100   = parseFloat(document.getElementById('ei-carbs100')?.value) || 0;
+    const fat100     = parseFloat(document.getElementById('ei-fat100')?.value) || 0;
+    const scale      = grams / 100;
+    ing.kcal100    = kcal100;
+    ing.protein100 = protein100;
+    ing.carbs100   = carbs100;
+    ing.fat100     = fat100;
+    ing.kcal       = kcal100 * scale;
+    ing.protein    = protein100 * scale;
+    ing.carbs      = carbs100 * scale;
+    ing.fat        = fat100 * scale;
+  } else {
+    ing.kcal    = parseFloat(document.getElementById('ei-kcal')?.value) || 0;
+    ing.protein = parseFloat(document.getElementById('ei-protein')?.value) || 0;
+    ing.carbs   = parseFloat(document.getElementById('ei-carbs')?.value) || 0;
+    ing.fat     = parseFloat(document.getElementById('ei-fat')?.value) || 0;
+  }
+
+  editingIngId = null;
+  renderEditor();
+  renderSidebar();
+  updateDaily();
+  autoSave();
+  setTimeout(() => drawDonut(meal), 0);
+}
+
+// ===== MEAL SUMMARY CARD =====
+function renderMealSummaryCard(meal) {
+  const p = perMealTotals(meal);
+  const t = mealTotals(meal);
+  const maxM = Math.max(p.protein, p.carbs, p.fat, 1);
+  return `
+    <div class="summary-card">
+      <div class="sc-header">
+        <div class="sc-title">Per Portion</div>
+        <div class="per-badge">${meal.portions} portion${meal.portions !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="sc-body">
+        <div class="kcal-big-wrap">
+          <div class="kcal-num">${fmt(p.kcal)}</div>
+          <div class="kcal-lbl">kcal / portion</div>
+        </div>
+        <div class="donut-wrap">
+          <canvas class="donut-canvas" id="donut-${meal.id}" width="110" height="110"></canvas>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:var(--protein)"></div>Protein</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--carbs)"></div>Carbs</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--fat)"></div>Fat</div>
+        </div>
+        <div class="macro-rows">
+          ${macroRow('protein', 'Protein', p.protein, maxM)}
+          ${macroRow('carbs',   'Carbs',   p.carbs,   maxM)}
+          ${macroRow('fat',     'Fat',     p.fat,     maxM)}
+        </div>
+        <div class="divider"></div>
+        <div class="section-label">Total (all portions combined)</div>
+        ${totalRow('Kcal',    fmt(t.kcal),    '')}
+        ${totalRow('Protein', fmt(t.protein), 'g')}
+        ${totalRow('Carbs',   fmt(t.carbs),   'g')}
+        ${totalRow('Fat',     fmt(t.fat),     'g')}
+        ${totalRow('Weight',  fmt(meal.ingredients.reduce((s,i)=>s+i.grams,0)), 'g')}
+      </div>
+    </div>`;
+}
+
+function macroRow(key, label, val, max) {
+  const w = max > 0 ? (val / max * 100) : 0;
+  return `
+    <div class="mr">
+      <div class="mr-dot" style="background:var(--${key})"></div>
+      <div class="mr-name">${label}</div>
+      <div><span class="mr-val">${fmt(val)}</span><span class="mr-unit">g</span></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-bg"><div class="bar-fill" style="background:var(--${key});width:${w}%"></div></div>
+    </div>`;
+}
+
+function totalRow(label, val, unit) {
+  return `
+    <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:6px;color:var(--muted2)">
+      <span>${label}</span>
+      <span style="color:var(--text);font-family:'Syne',sans-serif;font-weight:600">${val}${unit}</span>
+    </div>`;
+}
+
+// ===== TOTALS =====
+function mealTotals(meal) {
+  return {
+    kcal:    meal.ingredients.reduce((s, i) => s + i.kcal, 0),
+    protein: meal.ingredients.reduce((s, i) => s + i.protein, 0),
+    carbs:   meal.ingredients.reduce((s, i) => s + i.carbs, 0),
+    fat:     meal.ingredients.reduce((s, i) => s + i.fat, 0),
+  };
+}
+
+function perMealTotals(meal) {
+  const t = mealTotals(meal);
+  const p = meal.portions || 1;
+  return { kcal: t.kcal/p, protein: t.protein/p, carbs: t.carbs/p, fat: t.fat/p };
+}
+
+function dayTotals() {
+  return meals.reduce((acc, m) => {
+    const t = perMealTotals(m);
+    acc.kcal += t.kcal; acc.protein += t.protein; acc.carbs += t.carbs; acc.fat += t.fat;
+    return acc;
+  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+}
+
+function getGoals() {
+  return {
+    kcal:    parseFloat(document.getElementById('g-kcal')?.value) || 2000,
+    protein: parseFloat(document.getElementById('g-protein')?.value) || 150,
+    carbs:   parseFloat(document.getElementById('g-carbs')?.value) || 250,
+    fat:     parseFloat(document.getElementById('g-fat')?.value) || 65,
+  };
+}
+
+// ===== DAILY VIEW =====
+function updateDaily() {
+  autoSave();
+  if (activeView !== 'daily') return;
+  const totals = dayTotals();
+  const goals  = getGoals();
+
+  const statsData = [
+    { key: 'kcal',    label: 'Calories', val: totals.kcal,    goal: goals.kcal,    unit: 'kcal', color: COLORS.kcal },
+    { key: 'protein', label: 'Protein',  val: totals.protein, goal: goals.protein, unit: 'g',    color: COLORS.protein },
+    { key: 'carbs',   label: 'Carbs',    val: totals.carbs,   goal: goals.carbs,   unit: 'g',    color: COLORS.carbs },
+    { key: 'fat',     label: 'Fat',      val: totals.fat,     goal: goals.fat,     unit: 'g',    color: COLORS.fat },
+  ];
+
+  document.getElementById('statTiles').innerHTML = statsData.map(s => {
+    const pct    = s.goal > 0 ? Math.min((s.val / s.goal) * 100, 100) : 0;
+    const rawPct = s.goal > 0 ? (s.val / s.goal * 100) : 0;
+    const over   = rawPct > 100;
+    const cls    = over ? 'over' : 'under';
+    return `
+      <div class="stat-tile">
+        <div class="stat-tile-bg"></div>
+        <div class="stat-tile-progress" style="background:${s.color};width:${pct}%"></div>
+        <div class="stat-tile-label">${s.label}</div>
+        <div class="stat-tile-val" style="color:${s.color}">${fmt(s.val)}</div>
+        <div class="stat-tile-unit">of ${fmt(s.goal)} ${s.unit}</div>
+        <div class="stat-tile-pct ${cls}">${s.goal > 0 ? fmt(rawPct) + '%' : '—'} of goal</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('radialWrap').innerHTML = statsData.map(s => {
+    const pct = s.goal > 0 ? s.val / s.goal : 0;
+    return `
+      <div class="radial-card">
+        <canvas class="radial-canvas" id="radial-${s.key}" width="72" height="72"></canvas>
+        <div class="radial-name">${s.label}</div>
+        <div class="radial-pct" style="color:${s.color}">${s.goal > 0 ? fmt(Math.min(pct*100,999)) : '—'}%</div>
+      </div>`;
+  }).join('');
+
+  statsData.forEach(s => {
+    drawRadial('radial-' + s.key, s.goal > 0 ? Math.min(s.val / s.goal, 1) : 0, s.color);
+  });
+
+  const maxKcal = Math.max(...meals.map(m => perMealTotals(m).kcal), goals.kcal, 1);
+  const tbody = document.getElementById('mealsTableBody');
+  if (!tbody) return;
+
+  const mealRows = meals.map(m => {
+    const p = perMealTotals(m);
+    return `
+      <tr onclick="openModal(${m.id})">
+        <td>
+          <div class="mc-meal-name">${esc(m.name)}</div>
+          <div class="mc-meal-portions">${m.portions} portion${m.portions !== 1 ? 's' : ''} · ${m.ingredients.length} ingredients</div>
+        </td>
+        <td style="color:var(--kcal);font-family:'Syne',sans-serif;font-weight:700">${fmt(p.kcal)}</td>
+        <td style="color:var(--protein)">${fmt(p.protein)}g</td>
+        <td style="color:var(--carbs)">${fmt(p.carbs)}g</td>
+        <td style="color:var(--fat)">${fmt(p.fat)}g</td>
+        <td class="mc-bar-cell">
+          <div class="mc-mini-bar"><div class="mc-mini-fill" style="background:var(--kcal);width:${p.kcal/maxKcal*100}%"></div></div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const goalRow = `
+    <tr class="goal-row">
+      <td><div class="mc-meal-name" style="color:var(--accent)">🎯 Daily Goal</div></td>
+      <td style="color:var(--accent)">${fmt(goals.kcal)}</td>
+      <td>${fmt(goals.protein)}g</td>
+      <td>${fmt(goals.carbs)}g</td>
+      <td>${fmt(goals.fat)}g</td>
+      <td><div class="mc-mini-bar"><div class="mc-mini-fill" style="background:var(--accent);width:${goals.kcal/maxKcal*100}%"></div></div></td>
+    </tr>`;
+
+  const totalRow2 = `
+    <tr style="background:var(--surface2)">
+      <td><div class="mc-meal-name">Σ Daily Total</div><div class="mc-meal-portions">sum of all per-portion values</div></td>
+      <td style="font-family:'Syne',sans-serif;font-weight:700">${fmt(totals.kcal)}</td>
+      <td>${fmt(totals.protein)}g</td>
+      <td>${fmt(totals.carbs)}g</td>
+      <td>${fmt(totals.fat)}g</td>
+      <td><div class="mc-mini-bar"><div class="mc-mini-fill" style="background:var(--muted2);width:${totals.kcal/maxKcal*100}%"></div></div></td>
+    </tr>`;
+
+  tbody.innerHTML = mealRows + goalRow + totalRow2;
+}
+
+// ===== MODAL =====
+function openModal(mealId) {
+  const meal = getMeal(mealId);
+  if (!meal) return;
+  const t = mealTotals(meal);
+  const p = perMealTotals(meal);
+  const goals = getGoals();
+
+  document.getElementById('modalTitle').textContent = meal.name;
+  document.getElementById('modalSubtitle').textContent =
+    `${meal.ingredients.length} ingredients · ${meal.portions} portion${meal.portions !== 1 ? 's' : ''}`;
+
+  const macros4 = [
+    { label: 'Kcal',    val: fmt(t.kcal),    unit: '',  color: COLORS.kcal },
+    { label: 'Protein', val: fmt(t.protein), unit: 'g', color: COLORS.protein },
+    { label: 'Carbs',   val: fmt(t.carbs),   unit: 'g', color: COLORS.carbs },
+    { label: 'Fat',     val: fmt(t.fat),     unit: 'g', color: COLORS.fat },
+  ];
+  const per4 = [
+    { label: 'Kcal/ptn',    val: fmt(p.kcal),    unit: '',  color: COLORS.kcal },
+    { label: 'Protein/ptn', val: fmt(p.protein), unit: 'g', color: COLORS.protein },
+    { label: 'Carbs/ptn',   val: fmt(p.carbs),   unit: 'g', color: COLORS.carbs },
+    { label: 'Fat/ptn',     val: fmt(p.fat),     unit: 'g', color: COLORS.fat },
+  ];
+
+  const tile = m => `
+    <div class="modal-macro-tile">
+      <div class="mmt-label">${m.label}</div>
+      <div class="mmt-val" style="color:${m.color}">${m.val}</div>
+      <div class="mmt-unit">${m.unit}</div>
+    </div>`;
+
+  const goalBarsData = [
+    { label: 'Kcal',    val: t.kcal,    goal: goals.kcal,    color: COLORS.kcal },
+    { label: 'Protein', val: t.protein, goal: goals.protein, color: COLORS.protein },
+    { label: 'Carbs',   val: t.carbs,   goal: goals.carbs,   color: COLORS.carbs },
+    { label: 'Fat',     val: t.fat,     goal: goals.fat,     color: COLORS.fat },
+  ];
+
+  const goalBars = goalBarsData.map(g => {
+    const pct    = g.goal > 0 ? Math.min((g.val / g.goal) * 100, 100) : 0;
+    const pctRaw = g.goal > 0 ? (g.val / g.goal * 100) : 0;
+    const over   = pctRaw > 100;
+    return `
+      <div class="mgp-row">
+        <div class="mgp-name">${g.label}</div>
+        <div class="mgp-bar-bg"><div class="mgp-bar-fill" style="background:${g.color};width:${pct}%"></div></div>
+        <div class="mgp-pct" style="color:${over ? 'var(--accent3)' : g.color}">${fmt(pctRaw)}%</div>
+      </div>`;
+  }).join('');
+
+  const ingRows = meal.ingredients.length === 0
+    ? `<div class="empty-state"><div class="ei">🥦</div>No ingredients.</div>`
+    : meal.ingredients.map(i => {
+        const pPortions_kcal = i.kcal / meal.portions;
+        const pPortions_p    = i.protein / meal.portions;
+        const pPortions_c    = i.carbs / meal.portions;
+        const pPortions_f    = i.fat / meal.portions;
+        return `
+          <div class="modal-ing-row">
+            <div class="mir-name">
+              <div class="mir-n">${esc(i.name)}</div>
+              <div class="mir-g">${i.grams}g${i.per100 ? ' (scaled from /100g)' : ''}</div>
+            </div>
+            <div class="mir-macros">
+              <span class="mir-k">${fmt(i.kcal)} kcal</span>
+              <span class="mir-p">${fmt(i.protein)}g P</span>
+              <span class="mir-c">${fmt(i.carbs)}g C</span>
+              <span class="mir-f">${fmt(i.fat)}g F</span>
+              ${meal.portions > 1 ? `<span style="color:var(--muted);font-size:0.65rem">→ ${fmt(pPortions_kcal)} kcal/ptn</span>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="section-label" style="margin-bottom:10px">Total (all portions)</div>
+    <div class="modal-macro-grid">${macros4.map(tile).join('')}</div>
+
+    <div class="section-label" style="margin-bottom:10px">Per Portion</div>
+    <div class="modal-macro-grid">${per4.map(tile).join('')}</div>
+
+    <div class="divider"></div>
+
+    <div class="modal-goal-section">
+      <div class="modal-goal-title">% of Your Daily Goal</div>
+      ${goalBars}
     </div>
 
+    <div class="divider"></div>
+
+    <div class="modal-ing-section">
+      <div class="modal-ing-title">Ingredients Breakdown</div>
+      ${ingRows}
+    </div>`;
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closeModalDirect(); }
+function closeModalDirect() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+// ===== VIEW SWITCHING =====
+function switchView(v) {
+  activeView = v;
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 && v === 'editor') || (i === 1 && v === 'daily'));
+  });
+  if (v === 'daily') updateDaily();
+}
+
+// ===== CANVAS DRAWING =====
+function drawDonut(meal) {
+  const canvas = document.getElementById('donut-' + meal.id);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const pm  = perMealTotals(meal);
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const total = pm.protein + pm.carbs + pm.fat;
+  const cx = W/2, cy = H/2, r = W/2 - 4;
+
+  if (total <= 0) {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.fillStyle = '#252929'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, r*0.58, 0, Math.PI*2);
+    ctx.fillStyle = '#111313'; ctx.fill();
+    return;
+  }
+
+  const segs = [
+    { val: pm.protein, color: COLORS.protein },
+    { val: pm.carbs,   color: COLORS.carbs },
+    { val: pm.fat,     color: COLORS.fat },
+  ];
+
+  let start = -Math.PI/2;
+  segs.forEach(s => {
+    if (s.val <= 0) return;
+    const angle = (s.val / total) * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, start + angle); ctx.closePath();
+    ctx.fillStyle = s.color; ctx.fill();
+    start += angle;
+  });
+
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.58, 0, Math.PI*2);
+  ctx.fillStyle = '#111313'; ctx.fill();
+}
+
+function drawRadial(id, pct, color) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const cx = W/2, cy = H/2, r = W/2 - 6;
+
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.strokeStyle = '#252929'; ctx.lineWidth = 5; ctx.stroke();
+
+  if (pct > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + pct * Math.PI * 2);
+    ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke();
+  }
+}
+
+// ===== UTILS =====
+function fmt(n) {
+  if (!n || isNaN(n)) return '0';
+  return n % 1 === 0 ? n.toFixed(0) : n.toFixed(1);
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Draw donut after renderEditor
+const _origRE = renderEditor;
+renderEditor = function() {
+  _origRE();
+  const meal = getActive();
+  if (meal) setTimeout(() => drawDonut(meal), 0);
+};
+
+// ===== SAVE / LOAD =====
+function savePlan() {
+  const goals = getGoals();
+  const lines = [];
+  const d = new Date();
+  lines.push('================================================================');
+  lines.push('  MEALBOX MACRO PLAN');
+  lines.push(`  Saved: ${d.toLocaleDateString('en-GB', {weekday:'long', year:'numeric', month:'long', day:'numeric'})}`);
+  lines.push('================================================================');
+  lines.push('');
+  lines.push('DAILY GOALS');
+  lines.push('----------------------------------------------------------------');
+  lines.push(`  Calories : ${fmt(goals.kcal)} kcal`);
+  lines.push(`  Protein  : ${fmt(goals.protein)} g`);
+  lines.push(`  Carbs    : ${fmt(goals.carbs)} g`);
+  lines.push(`  Fat      : ${fmt(goals.fat)} g`);
+  lines.push('');
+
+  meals.forEach((meal, mi) => {
+    const t = mealTotals(meal);
+    const p = perMealTotals(meal);
+    lines.push(`================================================================`);
+    lines.push(`  MEAL ${mi + 1}: ${meal.name.toUpperCase()}`);
+    lines.push(`  Portions: ${meal.portions}`);
+    lines.push(`================================================================`);
+    lines.push('');
+    lines.push('  Ingredients:');
+    lines.push('  ' + '-'.repeat(62));
+    if (meal.ingredients.length === 0) {
+      lines.push('  (no ingredients)');
+    } else {
+      meal.ingredients.forEach(i => {
+        lines.push(`  - ${i.name}`);
+        lines.push(`      Weight  : ${i.grams} g`);
+        if (i.per100) {
+          lines.push(`      Entry   : per 100g (kcal: ${i.kcal100 ?? '?'}, protein: ${i.protein100 ?? '?'}g, carbs: ${i.carbs100 ?? '?'}g, fat: ${i.fat100 ?? '?'}g)`);
+        }
+        lines.push(`      Calories: ${fmt(i.kcal)} kcal`);
+        lines.push(`      Protein : ${fmt(i.protein)} g`);
+        lines.push(`      Carbs   : ${fmt(i.carbs)} g`);
+        lines.push(`      Fat     : ${fmt(i.fat)} g`);
+      });
+    }
+    lines.push('');
+    lines.push('  Totals (all portions combined):');
+    lines.push(`      Calories: ${fmt(t.kcal)} kcal  |  Protein: ${fmt(t.protein)} g  |  Carbs: ${fmt(t.carbs)} g  |  Fat: ${fmt(t.fat)} g`);
+    lines.push('');
+    lines.push(`  Per portion (÷${meal.portions}):`);
+    lines.push(`      Calories: ${fmt(p.kcal)} kcal  |  Protein: ${fmt(p.protein)} g  |  Carbs: ${fmt(p.carbs)} g  |  Fat: ${fmt(p.fat)} g`);
+    lines.push('');
+  });
+
+  const dayT = dayTotals();
+  lines.push('================================================================');
+  lines.push('  DAILY TOTAL (all meals, per portion each)');
+  lines.push('================================================================');
+  lines.push(`  Calories: ${fmt(dayT.kcal)} kcal  (goal: ${fmt(goals.kcal)} kcal, ${goals.kcal > 0 ? fmt(dayT.kcal/goals.kcal*100) : '—'}%)`);
+  lines.push(`  Protein : ${fmt(dayT.protein)} g     (goal: ${fmt(goals.protein)} g, ${goals.protein > 0 ? fmt(dayT.protein/goals.protein*100) : '—'}%)`);
+  lines.push(`  Carbs   : ${fmt(dayT.carbs)} g     (goal: ${fmt(goals.carbs)} g, ${goals.carbs > 0 ? fmt(dayT.carbs/goals.carbs*100) : '—'}%)`);
+  lines.push(`  Fat     : ${fmt(dayT.fat)} g     (goal: ${fmt(goals.fat)} g, ${goals.fat > 0 ? fmt(dayT.fat/goals.fat*100) : '—'}%)`);
+  lines.push('');
+  lines.push('================================================================');
+  lines.push('  [MACHINE DATA — do not edit below this line]');
+  lines.push('================================================================');
+  const data = { version: 1, goals, meals };
+  lines.push(JSON.stringify(data));
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `mealbox-plan-${d.toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ Meal plan saved!');
+}
+
+function loadPlan() {
+  document.getElementById('fileInput').click();
+}
+
+function onFileLoad(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result;
+      // Find the JSON line after the machine data marker
+      const marker = '[MACHINE DATA — do not edit below this line]';
+      const idx = text.indexOf(marker);
+      if (idx === -1) throw new Error('No machine data found');
+      const jsonLine = text.slice(idx + marker.length).trim().split('\n')
+        .find(l => l.trim().startsWith('{'));
+      if (!jsonLine) throw new Error('No JSON found');
+      const data = JSON.parse(jsonLine);
+      if (!data.meals || !Array.isArray(data.meals)) throw new Error('Invalid format');
+
+      // Restore state
+      meals = data.meals;
+      nextId = Math.max(...meals.flatMap(m => [m.id, ...m.ingredients.map(i => i.id)]), 0) + 1;
+
+      // Restore goals
+      if (data.goals) {
+        document.getElementById('g-kcal').value    = data.goals.kcal    ?? 2000;
+        document.getElementById('g-protein').value = data.goals.protein ?? 150;
+        document.getElementById('g-carbs').value   = data.goals.carbs   ?? 250;
+        document.getElementById('g-fat').value     = data.goals.fat     ?? 65;
+      }
+
+      activeMealId = meals.length ? meals[0].id : null;
+      editingIngId = null;
+      renderSidebar();
+      renderEditor();
+      if (activeView === 'daily') updateDaily();
+      showToast(`✓ Loaded "${file.name}" — ${meals.length} meal${meals.length !== 1 ? 's' : ''}`);
+    } catch (err) {
+      showToast('✗ Could not read file: ' + err.message);
+    }
+    // Reset so same file can be loaded again
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===== OPEN FOOD FACTS SEARCH =====
+async function searchProduct() {
+  const query = document.getElementById('f-search')?.value.trim();
+  if (!query) return;
+
+  const btn = document.getElementById('searchBtn');
+  const resultsEl = document.getElementById('searchResults');
+  if (!btn || !resultsEl) return;
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spin">⟳</span> Searching…`;
+  resultsEl.innerHTML = '';
+
+  try {
+    // Search Open Food Facts — include Swedish language preference, sort by popularity
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&sort_by=unique_scans_n&fields=product_name,brands,nutriments,quantity,countries_tags`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('Network error');
+    const data = await resp.json();
+
+    const products = (data.products || []).filter(p => {
+      const n = p.nutriments;
+      // Must have at least kcal data
+      return n && (n['energy-kcal_100g'] != null || n['energy-kcal'] != null);
+    }).slice(0, 6);
+
+    if (products.length === 0) {
+      resultsEl.innerHTML = `
+        <div class="search-results">
+          <div class="search-results-header">
+            <span>No results for "${esc(query)}"</span>
+            <span class="search-dismiss" onclick="clearSearch()">✕</span>
+          </div>
+          <div class="search-no-results">Try a different spelling or a more generic name.</div>
+        </div>`;
+    } else {
+      const rows = products.map((p, idx) => {
+        const n = p.nutriments;
+        const kcal    = n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0;
+        const protein = n['proteins_100g']    ?? 0;
+        const carbs   = n['carbohydrates_100g'] ?? 0;
+        const fat     = n['fat_100g']          ?? 0;
+        const name    = p.product_name || 'Unknown product';
+        const brand   = p.brands || '';
+        return `
+          <div class="search-result-item" onclick="applyProduct(${idx})"
+            data-name="${esc(name)}" data-brand="${esc(brand)}"
+            data-kcal="${kcal}" data-protein="${protein}" data-carbs="${carbs}" data-fat="${fat}">
+            <div>
+              <div class="sri-name">${esc(name)}</div>
+              <div class="sri-brand">${esc(brand)}${p.quantity ? ' · ' + esc(p.quantity) : ''}</div>
+            </div>
+            <div class="sri-macros">
+              <span class="sri-k">${fmt(kcal)} kcal</span>
+              <span class="sri-p">${fmt(protein)}g P</span>
+              <span class="sri-c">${fmt(carbs)}g C</span>
+              <span class="sri-f">${fmt(fat)}g F</span>
+              <span style="color:var(--muted);font-size:0.6rem">per 100g</span>
+            </div>
+          </div>`;
+      }).join('');
+
+      resultsEl.innerHTML = `
+        <div class="search-results">
+          <div class="search-results-header">
+            <span>${products.length} results — click to fill form</span>
+            <span class="search-dismiss" onclick="clearSearch()">✕</span>
+          </div>
+          ${rows}
+        </div>`;
+    }
+  } catch (err) {
+    resultsEl.innerHTML = `
+      <div class="search-results">
+        <div class="search-no-results">⚠ Search failed: ${esc(err.message)}. Check your connection.</div>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Search';
+  }
+}
+
+function applyProduct(idx) {
+  const items = document.querySelectorAll('.search-result-item');
+  const item  = items[idx];
+  if (!item) return;
+
+  const name    = item.dataset.name;
+  const kcal    = parseFloat(item.dataset.kcal)    || 0;
+  const protein = parseFloat(item.dataset.protein) || 0;
+  const carbs   = parseFloat(item.dataset.carbs)   || 0;
+  const fat     = parseFloat(item.dataset.fat)     || 0;
+
+  // Always switch to per-100g mode — that's what OFF provides
+  if (inputMode !== 'per100') {
+    inputMode = 'per100';
+    renderEditor();
+  }
+
+  // Fill in the form fields
+  const nameEl = document.getElementById('f-name');
+  if (nameEl) { nameEl.value = name; }
+
+  const k = document.getElementById('f-kcal100');
+  const p = document.getElementById('f-protein100');
+  const c = document.getElementById('f-carbs100');
+  const f = document.getElementById('f-fat100');
+  if (k) k.value = fmt(kcal);
+  if (p) p.value = fmt(protein);
+  if (c) c.value = fmt(carbs);
+  if (f) f.value = fmt(fat);
+
+  // Focus the weight field so user just types the amount
+  const gramsEl = document.getElementById('f-grams');
+  if (gramsEl) { gramsEl.value = ''; gramsEl.focus(); }
+
+  clearSearch();
+  updatePreview();
+  showToast(`✓ Filled "${name}" — enter total weight to continue`);
+}
+
+function clearSearch() {
+  const el = document.getElementById('searchResults');
+  if (el) el.innerHTML = '';
+  const inp = document.getElementById('f-search');
+  if (inp) inp.value = '';
+}
+
+// ===== BARCODE SCANNER =====
+let scannerCodeReader = null;
+let scannerStream     = null;
+let scannerPaused     = false;
+let lastScanResult    = null; // { name, brand, kcal100, protein100, carbs100, fat100 }
+
+function openScanner() {
+  scannerPaused  = false;
+  lastScanResult = null;
+  document.getElementById('scannerOverlay').classList.add('open');
+  document.getElementById('scannerResult').classList.remove('show');
+  setStatus('Initialising camera…', '');
+  startScanner();
+}
+
+function closeScanner() {
+  stopScanner();
+  document.getElementById('scannerOverlay').classList.remove('open');
+}
+
+function stopScanner() {
+  if (scannerCodeReader) {
+    try { scannerCodeReader.reset(); } catch(e) {}
+    scannerCodeReader = null;
+  }
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  const v = document.getElementById('scannerVideo');
+  if (v) v.srcObject = null;
+}
+
+async function startScanner() {
+  stopScanner();
+  setStatus('Requesting camera access…', '');
+
+  try {
+    // Prefer back camera on mobile
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById('scannerVideo');
+    video.srcObject = scannerStream;
+    await video.play();
+    setStatus('Point camera at a product barcode…', '');
+    decodeLoop();
+  } catch(err) {
+    if (err.name === 'NotAllowedError') {
+      setStatus('Camera permission denied. Please allow camera access and try again.', 'error');
+    } else {
+      setStatus('Camera error: ' + err.message, 'error');
+    }
+  }
+}
+
+async function decodeLoop() {
+  // Use ZXing if available, otherwise fall back to BarcodeDetector
+  if (typeof ZXing !== 'undefined') {
+    decodeWithZXing();
+  } else if ('BarcodeDetector' in window) {
+    decodeWithBarcodeDetector();
+  } else {
+    setStatus('⚠ Barcode decoding not supported in this browser. Try Chrome on Android/desktop.', 'error');
+  }
+}
+
+function decodeWithZXing() {
+  try {
+    const hints = new Map();
+    const formats = [
+      ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.UPC_A,
+      ZXing.BarcodeFormat.UPC_E,
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.DATA_MATRIX,
+      ZXing.BarcodeFormat.QR_CODE,
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+    scannerCodeReader = new ZXing.BrowserMultiFormatReader(hints, 300);
+    scannerCodeReader.decodeFromVideoElement(
+      document.getElementById('scannerVideo'),
+      (result, err) => {
+        if (scannerPaused) return;
+        if (result) {
+          onBarcodeDetected(result.getText());
+        }
+      }
+    );
+  } catch(e) {
+    // ZXing API varies by version — try alternate
+    try {
+      scannerCodeReader = new ZXing.BrowserMultiFormatReader();
+      scannerCodeReader.decodeFromVideoDevice(null, 'scannerVideo', (result, err) => {
+        if (scannerPaused) return;
+        if (result) onBarcodeDetected(result.getText());
+      });
+    } catch(e2) {
+      decodeWithBarcodeDetector();
+    }
+  }
+}
+
+async function decodeWithBarcodeDetector() {
+  const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] });
+  const video = document.getElementById('scannerVideo');
+
+  async function tick() {
+    if (scannerPaused || !document.getElementById('scannerOverlay').classList.contains('open')) return;
+    try {
+      const barcodes = await detector.detect(video);
+      if (barcodes.length > 0) {
+        onBarcodeDetected(barcodes[0].rawValue);
+        return;
+      }
+    } catch(e) {}
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+async function onBarcodeDetected(barcode) {
+  if (scannerPaused) return;
+  scannerPaused = true;
+  setStatus(`✓ Barcode detected: ${barcode} — looking up product…`, 'detected');
+
+  // Pause ZXing scanning
+  if (scannerCodeReader) {
+    try { scannerCodeReader.reset(); } catch(e) {}
+    scannerCodeReader = null;
+  }
+
+  try {
+    const url  = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}?fields=product_name,brands,nutriments,quantity`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (data.status !== 1 || !data.product) {
+      setStatus(`⚠ Product not found in Open Food Facts database (${barcode})`, 'error');
+      showScanAgain();
+      return;
+    }
+
+    const p = data.product;
+    const n = p.nutriments || {};
+    const kcal100    = n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0;
+    const protein100 = n['proteins_100g']      ?? 0;
+    const carbs100   = n['carbohydrates_100g'] ?? 0;
+    const fat100     = n['fat_100g']           ?? 0;
+    const name       = p.product_name || 'Unknown product';
+    const brand      = [p.brands, p.quantity].filter(Boolean).join(' · ');
+
+    lastScanResult = { name, brand, kcal100, protein100, carbs100, fat100 };
+
+    // Show result card
+    document.getElementById('srName').textContent  = name;
+    document.getElementById('srBrand').textContent = brand;
+    document.getElementById('srMacros').innerHTML = [
+      { label: 'Kcal',    val: fmt(kcal100),    unit: '',  color: 'var(--kcal)' },
+      { label: 'Protein', val: fmt(protein100), unit: 'g', color: 'var(--protein)' },
+      { label: 'Carbs',   val: fmt(carbs100),   unit: 'g', color: 'var(--carbs)' },
+      { label: 'Fat',     val: fmt(fat100),      unit: 'g', color: 'var(--fat)' },
+    ].map(m => `
+      <div class="srm-tile">
+        <div class="srm-label">${m.label}</div>
+        <div class="srm-val" style="color:${m.color}">${m.val}${m.unit}</div>
+        <div style="font-size:0.55rem;color:var(--muted)">per 100g</div>
+      </div>`).join('');
+
+    setStatus(`Found: ${name}`, 'detected');
+    document.getElementById('scannerResult').classList.add('show');
+
+  } catch(err) {
+    setStatus('⚠ Lookup failed: ' + err.message, 'error');
+    showScanAgain();
+  }
+}
+
+function useScanResult() {
+  if (!lastScanResult) return;
+  const r = lastScanResult;
+
+  // Switch to per-100g mode and fill fields
+  if (inputMode !== 'per100') { inputMode = 'per100'; renderEditor(); }
+
+  const nameEl = document.getElementById('f-name');
+  if (nameEl) nameEl.value = r.name;
+
+  const k = document.getElementById('f-kcal100');
+  const p = document.getElementById('f-protein100');
+  const c = document.getElementById('f-carbs100');
+  const f = document.getElementById('f-fat100');
+  if (k) k.value = fmt(r.kcal100);
+  if (p) p.value = fmt(r.protein100);
+  if (c) c.value = fmt(r.carbs100);
+  if (f) f.value = fmt(r.fat100);
+
+  const gramsEl = document.getElementById('f-grams');
+  if (gramsEl) { gramsEl.value = ''; gramsEl.focus(); }
+
+  closeScanner();
+  updatePreview();
+  showToast(`✓ "${r.name}" loaded — enter total weight to continue`);
+}
+
+function resetScanner() {
+  scannerPaused = false;
+  lastScanResult = null;
+  document.getElementById('scannerResult').classList.remove('show');
+  setStatus('Point camera at a product barcode…', '');
+  startScanner();
+}
+
+function showScanAgain() {
+  // show a minimal retry UI in the result area
+  const el = document.getElementById('scannerResult');
+  el.classList.add('show');
+  document.getElementById('srName').textContent  = 'Product not found';
+  document.getElementById('srBrand').textContent = 'This barcode is not in the Open Food Facts database.';
+  document.getElementById('srMacros').innerHTML  = '';
+  const useBtn = el.querySelector('.scanner-use-btn');
+  if (useBtn) useBtn.style.display = 'none';
+  setTimeout(() => { if (useBtn) useBtn.style.display = ''; }, 100);
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('scannerStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'scanner-status' + (cls ? ' ' + cls : '');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeScanner();
+    closeModalDirect();
+  }
+});
+
+// ===== START =====
+init();
+</script>
 </body>
 </html>
-<footer style="text-align:center; font-size:0.9em; color:#888; margin-top:2em;">
-    <span id="versionFootnote"></span>
-</footer>
